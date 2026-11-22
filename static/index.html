@@ -221,6 +221,7 @@ const T_GEN = {0:"Gestoppt",1:"Läuft",2:"Aufwärmen",3:"Abkühlen",4:"Stoppt",1
 // ===========================================================================
 // Verbindung zum Backend
 // ===========================================================================
+const ON_PI = location.protocol === "http:";
 function connect(){
   let opened = false;
   try { ws = new WebSocket(`${location.protocol==="https:"?"wss":"ws"}://${location.host}/ws`); }
@@ -248,8 +249,10 @@ function connect(){
     else if (m.type === "guard") { GUARD = m.guard; if (!GUARD.triggered) guardShown = false; }
     schedule();
   };
-  ws.onclose = () => { if (!opened && !DEMO) startDemo(); else if (!DEMO) setTimeout(connect, 3000); };
-  setTimeout(() => { if (!opened && !DEMO) { try{ws.close();}catch(e){} startDemo(); } }, 2500);
+  // Auf dem Pi (http) nie in den Demo-Modus fallen, sondern immer wieder neu verbinden
+  // (z. B. beim Hochfahren oder während eines Updates ist der Server kurz weg).
+  ws.onclose = () => { if (DEMO) return; if (!opened && !ON_PI) startDemo(); else setTimeout(connect, 3000); };
+  setTimeout(() => { if (!opened && !DEMO && !ON_PI) { try{ws.close();}catch(e){} startDemo(); } }, 2500);
 }
 function send(msg){
   if (DEMO) { demoCommand(msg); schedule(); return; }
