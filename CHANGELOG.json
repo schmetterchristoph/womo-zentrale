@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.5.1",
+    "date": "2026-11-22",
+    "changes": [
+      "Test-Push zeigt jetzt an, ob er gesendet wurde, und nennt den Kanal für die ntfy-App",
+      "Push-Nachrichten werden zuverlässiger verschickt (auch mit Umlauten im Titel)"
+    ]
+  },
+  {
     "version": "1.5.0",
     "date": "2026-11-22",
     "changes": [

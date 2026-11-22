@@ -618,21 +618,24 @@ def guard_public():
             "push": bool(CFG.get("alarm", {}).get("ntfy_topic"))}
 
 
-async def push(title: str, text: str, prio: str = "urgent"):
+async def push(title: str, text: str, prio: str = "urgent", detail: bool = False):
     c = CFG.get("alarm", {})
     topic = c.get("ntfy_topic")
-    if not topic:
-        return False
-    try:
-        async with aiohttp.ClientSession() as s:
-            async with s.post(f"{c.get('ntfy_server', 'https://ntfy.sh').rstrip('/')}/{topic}",
-                              data=text.encode(), timeout=aiohttp.ClientTimeout(total=15),
-                              headers={"Title": title.encode("utf-8").decode("latin-1", "ignore"),
-                                       "Priority": prio, "Tags": "rotating_light"}) as r:
-                return r.status < 300
-    except Exception as e:
-        log.warning("Push fehlgeschlagen: %s", e)
-        return False
+    res = (False, "Kein Push-Kanal eingetragen")
+    if topic:
+        server = c.get("ntfy_server", "https://ntfy.sh").rstrip("/")
+        try:
+            async with aiohttp.ClientSession() as s:
+                async with s.post(server, timeout=aiohttp.ClientTimeout(total=15),
+                                  json={"topic": topic, "title": title, "message": text,
+                                        "priority": {"min": 1, "low": 2, "default": 3, "high": 4, "urgent": 5}.get(prio, 3),
+                                        "tags": ["rotating_light"]}) as r:
+                    body = (await r.text())[:120]
+                    res = (r.status < 300, "Gesendet" if r.status < 300 else f"Fehler {r.status}: {body}")
+        except Exception as e:
+            res = (False, f"Keine Verbindung zu ntfy ({type(e).__name__})")
+        log.info("Push '%s': %s", title, res[1])
+    return res if detail else res[0]
 
 
 async def guard_set(armed: bool):
@@ -1032,7 +1035,12 @@ async def ws_handler(request):
         elif t == "guard":
             await guard_set(bool(cmd.get("armed")))
         elif t == "guard_test":
-            await push("Womo: Test", "Die Push-Nachricht funktioniert.", "default")
+            topic = CFG.get("alarm", {}).get("ntfy_topic")
+            if not topic:
+                res = (False, "Kein Push-Kanal eingetragen")
+            else:
+                res = await push("Womo: Test", "Die Push-Nachricht funktioniert.", "default", detail=True)
+            await ws.send_str(json.dumps({"type": "push_result", "ok": res[0], "msg": res[1], "topic": topic}))
         elif t == "ac_set":
             asyncio.create_task(gree_set(cmd))
         elif t == "level_cal":

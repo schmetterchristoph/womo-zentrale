@@ -221,6 +221,7 @@ const T_GEN = {0:"Gestoppt",1:"Läuft",2:"Aufwärmen",3:"Abkühlen",4:"Stoppt",1
 // ===========================================================================
 // Verbindung zum Backend
 // ===========================================================================
+let PUSH_MSG = "";
 const ON_PI = location.protocol === "http:";
 function connect(){
   let opened = false;
@@ -239,6 +240,7 @@ function connect(){
     else if (m.type === "update") UPD = m.update;
     else if (m.type === "changelog") CHANGELOG = m.changelog;
     else if (m.type === "reboot_result") REBOOT_MSG = m.msg;
+    else if (m.type === "push_result") PUSH_MSG = (m.ok ? "✓ Test-Push gesendet – kommt er nicht an, in der ntfy-App den Kanal abonnieren: " : "✗ " + m.msg + (m.topic ? " – Kanal: " : "")) + (m.topic || "");
     else if (m.type === "pin_result") { if (m.ok) pinClose(); else { PIN.val = ""; PIN.msg = "Falsche PIN"; pinRender(); } }
     else if (m.type === "weather") { WX = m.weather; PLACE = m.place; }
     else if (m.type === "lithium") LITHIUM = m.lithium;
@@ -296,7 +298,7 @@ function runAction(a){
   else if (cmd === "rollback") { send({type: "rollback"}); UPD = Object.assign({}, UPD, {status: "Wechsle zur vorherigen Version ..."}); }
   else if (cmd === "upd") { send({type: "update_check", apply: true}); UPD = Object.assign({}, UPD, {status: "Suche ..."}); }
   else if (cmd === "guard") send({type:"guard", armed: p[0] === "1"});
-  else if (cmd === "guardtest") send({type:"guard_test"});
+  else if (cmd === "guardtest") { PUSH_MSG = DEMO ? "Demo-Modus: keine Verbindung zum Pi" : "Sende …"; send({type:"guard_test"}); schedule(); }
   else if (cmd === "ac") { const v = p[0] === "target" ? Number(p[1]) : (p[0] === "mode" || p[0] === "fan") ? p[1] : p[1] === "1"; acSend({[p[0]]: v}); }
   else if (cmd === "tm" || cmd === "alf" || cmd === "al") clockAction(cmd, p[0], p[1]);
   else if (cmd === "ring") ringStop(p[0] === "snooze");
@@ -1331,7 +1333,8 @@ function updLevel(){
         <div class="mid" style="color:${g.triggered ? "var(--red)" : g.armed ? "var(--green)" : "var(--mute)"}">${g.triggered ? "AUSGELÖST!" : g.armed ? "Scharf" : "Aus"}</div>
         <div class="hint" style="margin:4px 0 10px">${g.armed ? "Push aufs Handy bei Bewegung des Fahrzeugs" : "Meldet jede Bewegung des Womos per Push aufs Handy"}${g.push ? "" : " – ntfy-Kanal fehlt in config.json"}</div>
         <div class="row">${holdBtn(g.armed ? "Ausschalten" : "Scharf schalten", `guard|${g.armed ? 0 : 1}`, g.armed ? "sel red" : "sel green", !ok && !DEMO)}
-          <button class="btn" data-tap="guardtest">Test-Push</button></div></div>
+          <button class="btn" data-tap="guardtest">Test-Push</button></div>
+        ${PUSH_MSG ? `<div class="hint" style="margin-top:8px;user-select:text">${esc(PUSH_MSG)}</div>` : ""}</div>
     </div></div>`);
 }
 
