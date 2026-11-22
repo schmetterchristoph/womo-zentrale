@@ -15,8 +15,8 @@ html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:sys
 #stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;background:var(--bg);display:grid;grid-template-columns:92px 1fr;grid-template-rows:64px 1fr}
 #dim{position:absolute;inset:0;background:#000;pointer-events:none;opacity:0;transition:opacity .4s}
 /* Navigation */
-nav{grid-row:1/3;background:#070b10;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:3px}
-nav button{width:76px;height:55px;border:0;border-radius:16px;background:transparent;color:#b4c2d2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;font-weight:600;letter-spacing:.2px;font-family:inherit;cursor:pointer;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+nav{grid-row:1/3;background:#070b10;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:2px}
+nav button{width:76px;height:50px;border:0;border-radius:16px;background:transparent;color:#b4c2d2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;font-weight:600;letter-spacing:.2px;font-family:inherit;cursor:pointer;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
 nav button svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;shape-rendering:geometricPrecision;stroke-linecap:round;stroke-linejoin:round}
 nav button.on{background:var(--panel2);color:var(--blue)}
 /* Kopfzeile */
@@ -146,6 +146,56 @@ input[type=range]{width:100%;height:40px;accent-color:var(--blue)}
 .pinOk{background:var(--green);border-color:var(--green);color:#fff;font-size:22px}
 .verTag{font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:8px;padding:2px 8px}
 #sleepBox{position:absolute;inset:0;background:#000;z-index:80;display:none;cursor:none}
+/* Extras-Seite */
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tab{height:46px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:#b4c2d2;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px}
+.tab.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.tabBadge{background:var(--orange);color:#fff;border-radius:10px;padding:1px 8px;font-size:13px}
+.exPane{position:absolute;left:22px;right:22px;top:78px;bottom:18px}
+.chkRow{display:flex;align-items:center;gap:12px;padding:0 10px 0 14px;height:56px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);margin-bottom:8px;cursor:pointer;font-size:18px}
+.chkRow.done{background:rgba(52,195,143,.12);border-color:rgba(52,195,143,.5)}
+.chkRow.done .chkT{color:var(--mute);text-decoration:line-through}
+.chkBox{width:30px;height:30px;border-radius:8px;border:2px solid var(--mute);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+.chkRow.done .chkBox{background:var(--green);border-color:var(--green);color:#fff}
+.chkT{flex:1}
+.iconBtn{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--mute);font-size:18px;position:relative;overflow:hidden;cursor:pointer;padding:0;font-family:inherit}
+.iconBtn.holding .fill{width:100%;transition:width .9s linear}
+.iconBtn .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,77,94,.35)}
+.btn.sm{height:44px;font-size:15px;padding:0 12px}
+.mtRow{display:grid;grid-template-columns:1fr 150px 110px auto;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);margin-bottom:8px}
+.mtName{font-size:17px;font-weight:600}
+.mtSub{font-size:13px;color:var(--mute);margin-top:2px}
+.pill{display:inline-block;border-radius:10px;padding:4px 10px;font-size:14px;font-weight:650;text-align:center}
+.pill.ok{background:rgba(52,195,143,.15);color:var(--green)}
+.pill.soon{background:rgba(255,194,51,.15);color:var(--yellow)}
+.pill.due{background:rgba(255,77,94,.18);color:var(--red)}
+.pill.none{background:var(--panel);color:var(--mute)}
+.wRow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;padding:8px 12px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);margin-bottom:8px;min-height:58px}
+.wRow.off{opacity:.5}
+.step{display:flex;align-items:center;gap:6px}
+.step b{min-width:78px;text-align:center;font-size:18px;font-variant-numeric:tabular-nums}
+.tog{width:70px;height:40px;border-radius:20px;border:1px solid var(--line);background:var(--panel);color:var(--mute);font-family:inherit;font-weight:700;font-size:14px;cursor:pointer}
+.tog.on{background:var(--green);border-color:var(--green);color:#fff}
+.warnItem{border-left:4px solid var(--orange);background:rgba(255,138,61,.10);border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.warnItem b{display:block;font-size:17px;margin-bottom:2px}
+.warnItem span{font-size:14px;color:#ffd9c2}
+#mapBox{position:relative;overflow:hidden;border-radius:14px;background:#0c1620;touch-action:none;cursor:grab}
+#mapBox img{position:absolute;width:256px;height:256px;user-select:none;-webkit-user-drag:none;pointer-events:none;filter:brightness(.82) saturate(.85)}
+#mapBox svg{position:absolute;left:0;top:0;pointer-events:none}
+.mapCtl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:2}
+.mapCtl button{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:rgba(10,16,24,.85);color:#fff;font-size:22px;font-family:inherit;cursor:pointer}
+.mapAttr{position:absolute;right:6px;bottom:4px;font-size:11px;color:#cfd8e3;background:rgba(0,0,0,.45);padding:1px 6px;border-radius:6px;z-index:2}
+.stay{padding:10px 12px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);margin-bottom:8px;display:flex;gap:10px;align-items:center}
+.stayN{width:30px;height:30px;border-radius:50%;background:var(--orange);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;font-size:14px}
+.chart text{font-size:12px;fill:var(--mute);font-family:inherit}
+#locBox,#driveBox{position:absolute;inset:0;background:rgba(3,10,18,.88);display:none;align-items:center;justify-content:center;z-index:45}
+#locBox{align-items:flex-start;padding-top:24px}
+#driveBox{background:rgba(40,6,12,.92);z-index:55}
+.locRes{display:block;width:100%;text-align:left;margin-bottom:6px;height:auto;padding:10px 14px;font-size:17px}
+.qrBox{background:#fff;border-radius:14px;padding:12px;width:244px;height:244px;display:flex;align-items:center;justify-content:center}
+.qrBox svg{width:220px;height:220px}
+.urlBig{font-size:24px;font-weight:700;color:var(--cyan);user-select:text;font-variant-numeric:tabular-nums}
+.code{font-family:ui-monospace,Menlo,Consolas,monospace;background:#070c12;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px;user-select:text;display:block;margin:4px 0}
 </style>
 </head>
 <body>
@@ -230,7 +280,8 @@ function connect(){
   ws.onopen = () => { opened = true; };
   ws.onmessage = ev => {
     const m = JSON.parse(ev.data);
-    if (m.type === "snapshot") { for (const k in V) delete V[k]; Object.assign(V, m.values); }
+    if (exMessage(m)) {}
+    else if (m.type === "snapshot") { for (const k in V) delete V[k]; Object.assign(V, m.values); }
     else if (m.type === "delta") Object.assign(V, m.values);
     else if (m.type === "status") {
       ST = m;
@@ -284,6 +335,7 @@ document.addEventListener("click", e => {
 });
 function runAction(a){
   const [cmd, ...p] = a.split("|");
+  if (exAction(cmd, p)) { schedule(); return; }
   if (cmd === "w") write(p[0], Number(p[1]));
   else if (cmd === "shr") send({type:"shr", cmd:p[0]});
   else if (cmd === "limit") limitStep(Number(p[0]), p[1]);
@@ -334,6 +386,7 @@ const IC = {
   level:'<rect x="2" y="8" width="20" height="8" rx="4"/><circle cx="12" cy="12" r="2"/><path d="M8 8v8M16 8v8"/>',
   radio:'<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8l10-5"/><circle cx="15" cy="14" r="3"/><path d="M6 12h3M6 15h3"/>',
   wx:'<circle cx="8" cy="9" r="3.5"/><path d="M8 2v1.5M2 9h1.5M3.8 4.8l1 1M12.2 4.8l-1 1"/><path d="M9 19h9a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.5A3 3 0 0 0 9 19z"/>',
+  extra:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2.2 4.8-4.8 2.2 2.2-4.8z"/>',
   sys:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
 };
 
@@ -373,6 +426,7 @@ const PAGES = [
   {id:"wx",     t:"Wetter",   ic:"wx"},
   {id:"clock",  t:"Uhr",      ic:"clock"},
   {id:"radio",  t:"Radio",    ic:"radio"},
+  {id:"extras", t:"Extras",   ic:"extra"},
   {id:"sys",    t:"System",   ic:"sys"},
 ];
 let cur = "start";
@@ -713,6 +767,12 @@ function flowBox(x, y, title, val, col, sub=""){
     <text x="95" y="64" text-anchor="middle" font-size="28" font-weight="700" fill="${col}">${val}</text>
     <text x="95" y="84" text-anchor="middle" font-size="13" fill="#8697ab">${sub}</text></g>`;
 }
+function fcMini(){
+  if (!FC || !FC.text) return "";
+  const col = FC.shore ? "var(--cyan)" : FC.hours != null && FC.hours < 24 ? "var(--orange)" : "var(--green)";
+  return `<div class="card" data-tap="goex|verlauf" style="cursor:pointer"><h3>Akku-Prognose</h3><div class="mid" style="color:${col}">${esc(FC.text)}</div>
+    <div class="hint" style="margin-top:6px">Verbrauch Ø ${fp(FC.load_w, 0, "W")} · Solar morgen ${fp((FC.pv_tomorrow_wh || 0) / 1000, 1, "kWh")} · Verlauf ›</div></div>`;
+}
 function updEnergy(){
   const pv = n("system/0/Dc/Pv/Power"), src = n("system/0/Ac/ActiveIn/Source");
   const inW = add(n("system/0/Ac/Grid/L1/Power"), n("system/0/Ac/Genset/L1/Power"));
@@ -747,7 +807,7 @@ function updEnergy(){
       <span>Max. heute</span><span>${fWp(sn("solarcharger",i,"History/Daily/0/MaxPower"))}</span>
     </div></div>`).join("");
   paint("energy", `<div class="card" style="padding:10px">${svg}</div>
-    <div class="grid scroll" data-keep="m" style="grid-template-columns:repeat(3,1fr);margin-top:14px;max-height:270px">${mppts || '<div class="empty">Kein Solarladeregler gefunden</div>'}</div>`);
+    <div class="grid scroll" data-keep="m" style="grid-template-columns:repeat(3,1fr);margin-top:14px;max-height:270px">${fcMini()}${mppts || '<div class="empty">Kein Solarladeregler gefunden</div>'}</div>`);
 }
 
 // ------------------------------------------------------------ Batterie ----
@@ -787,7 +847,7 @@ function updBatt(){
           <span>Kapazität</span><span>${fp(sn("battery",i,"Capacity") ?? sn("battery",i,"InstalledCapacity"),0,"Ah")}</span>`}
         </div></div></div>`;
   }).join("");
-  paint("batt", `<div class="scroll" data-keep="b" style="height:100%"><div class="grid">${cards}</div>${lithiumHtml()}</div>`);
+  paint("batt", `<div class="scroll" data-keep="b" style="height:100%"><div class="grid">${fcMini()}${cards}</div>${lithiumHtml()}</div>`);
 }
 
 // ----------------------------------------------------------- Landstrom ----
@@ -1642,6 +1702,8 @@ function buildImgStart(){
     <text x="22" y="50" class="hTitle" id="hVeh" style="font-size:34px">DETHLEFFS XXL A</text>
     <text x="24" y="74" class="hSub">GLOBETROTTER · ALKOVEN</text>
     <text x="24" y="130" class="hudS" id="hVer" style="font-size:12px;opacity:.7"></text>
+    <g class="hud" data-tap="goex|warn" id="hWarnG" style="display:none"><rect x="18" y="140" width="400" height="30" rx="8" fill="rgba(255,138,61,.18)" stroke="#ff8a3d"/>
+      <text x="30" y="161" class="hChip" id="hWarn" style="font-size:15px;fill:#ffcfae"></text></g>
 
     <g transform="translate(24,92)" id="hChips"></g>
     <!-- Wetter -->
@@ -1735,7 +1797,10 @@ function updImgStart(){
   txt("iBtnKlima", AC && AC.ok ? (AC.power ? `${({cool: "Kühlen", heat: "Heizen", dry: "Entf.", fan: "Lüften", auto: "Auto"})[AC.mode] || ""} ${fp(AC.target, 0, "°C")}` : "aus") : "");
   txt("iBtnRadio", RADIO.playing && !RADIO.audio.paused ? RADIO.playing.name.slice(0, 22) : "");
   txt("iBtnClock", ALARMS.some(a => a.on) ? "⏰ " + ALARMS.filter(a => a.on).map(a => `${pad(a.h)}:${pad(a.m)}`)[0] : "");
-  txt("iBtnEnergy", "");
+  txt("iBtnEnergy", FC && FC.text ? (FC.shore ? "Landstrom · lädt" : FC.text.replace("reicht noch ca. ", "Akku reicht ≈ ")) : "");
+  const wg = document.getElementById("hWarnG");
+  if (wg) { wg.style.display = WARNS.length ? "" : "none";
+    txt("hWarn", WARNS.length ? "⚠ " + WARNS[0].title.replace(/^\S+\s/, "").toUpperCase() + (WARNS.length > 1 ? `  +${WARNS.length - 1} WEITERE` : "") : ""); }
   if (!IFLOWS.raf) IFLOWS.raf = requestAnimationFrame(frameImg);
 }
 
@@ -1802,8 +1867,9 @@ function updWx(){
   const sr = new Date(d.sunrise[0]), ss = new Date(d.sunset[0]);
   const hm = t => t.toLocaleTimeString("de-DE", {hour:"2-digit", minute:"2-digit"});
   paint("wx", `<div class="grid" style="grid-template-columns:360px 1fr">
-      <div class="card"><h3>${esc(PLACE)} · jetzt${WX && WX.loc_source ? ` <span style="opacity:.6">· ${({gps:"📍 GPS",internet:"📶 Standort über Internet",fest:"fester Ort"})[WX.loc_source]||""}</span>` : ""}</h3><div class="row"><div style="width:96px;height:96px">${wxIcon(c.weather_code, c.is_day)}</div>
+      <div class="card"><h3 style="display:flex;align-items:center;gap:8px">${esc(PLACE)} · jetzt<span class="sp" style="flex:1"></span><button class="btn sm" style="height:36px;font-size:14px;text-transform:none;letter-spacing:0" data-tap="loc|open">📍 Ort ändern</button></h3><div class="row"><div style="width:96px;height:96px">${wxIcon(c.weather_code, c.is_day)}</div>
         <div><div class="big" style="font-size:56px">${fp(c.temperature_2m,0)}<span class="u">°C</span></div><div class="mute">${WX_TXT(c.weather_code)}</div></div></div>
+        <div class="hint" style="margin-top:6px">${WX.loc ? "Standort: " + esc(WX.loc.src_txt) + (WX.loc.acc ? ` (±${Math.round(WX.loc.acc)} m)` : "") : ""}</div>
         <div class="kv" style="font-size:15px;margin-top:8px"><span>Gefühlt</span><span>${fp(c.apparent_temperature,0,"°C")}</span>
         <span>Luftfeuchte</span><span>${fp(c.relative_humidity_2m,0,"%")}</span><span>Wind / Böen</span><span>${fp(c.wind_speed_10m,0)} / ${fp(c.wind_gusts_10m,0,"km/h")}</span>
         <span>Luftdruck</span><span>${fp(c.pressure_msl,0,"hPa")}</span><span>Sonne</span><span>${hm(sr)} – ${hm(ss)}</span><span>UV-Index</span><span>${fp(d.uv_index_max[0],0)}</span></div></div>
@@ -1888,10 +1954,483 @@ function updHeader(){
   html("hdrWx", WX && WX.current ? `${wxIcon(WX.current.weather_code, WX.current.is_day)}<span>${fp(WX.current.temperature_2m,0,"°C")}</span>` : "");
   let al = 0, warn = 0;
   for (const k in V) if (k.includes("/Alarms/") && V[k] > 0) { if (V[k] >= 2) al++; else warn++; }
-  html("alarmBadge", al ? `<span class="badge">${al} Alarm${al > 1 ? "e" : ""}</span>` : warn ? `<span class="badge warn">${warn} Warnung${warn > 1 ? "en" : ""}</span>` : "");
+  html("alarmBadge", (al ? `<span class="badge">${al} Alarm${al > 1 ? "e" : ""}</span> ` : warn ? `<span class="badge warn">${warn} Warnung${warn > 1 ? "en" : ""}</span> ` : "") +
+    (WARNS.length ? `<span class="badge warn" data-tap="goex|warn" style="cursor:pointer">⚠ ${esc(WARNS[0].title.replace(/^\S+\s/, ""))}${WARNS.length > 1 ? ` +${WARNS.length - 1}` : ""}</span>` : ""));
 }
 
-const RENDER = {start:updStart, energy:updEnergy, batt:updBatt, ac:updAc, tanks:updTanks, sw:updSw, level:updLevel, klima:updKlima, clock:updClock, radio:updRadio, wx:updWx, sys:updSys};
+// ===========================================================================
+// Extras: Abfahrt, Reise, Verlauf, Wartung, Warnungen, Handy
+// ===========================================================================
+let WARNS = [], FC = null, CHK = null, MAINT = null, TRIP = null, NET = null, WCFG = null, WNAMES = {}, DRIVE_ALERT = null;
+const HISTD = {};
+let EXTAB = "abfahrt", HRANGE = "24h";
+const LOC = {open: false, busy: false, res: null, err: false, q: ""};
+const EX_TABS = [["abfahrt", "Abfahrt"], ["reise", "Reisekarte"], ["verlauf", "Verlauf"], ["wartung", "Wartung"], ["warn", "Warnungen"], ["handy", "Handy"]];
+const DAYMS = 864e5;
+const dDE = t => new Date(t).toLocaleDateString("de-DE", {day: "2-digit", month: "2-digit", year: "numeric"});
+const dShort = t => new Date(t).toLocaleDateString("de-DE", {weekday: "short", day: "2-digit", month: "2-digit"});
+
+function exAction(cmd, p){
+  if (cmd === "ex" || cmd === "goex") {
+    if (cmd === "goex") show("extras");
+    EXTAB = p[0]; exEnter(); return true;
+  }
+  if (cmd === "chk") {
+    const [a, i] = p;
+    send(a === "toggle" ? {type: "chk_toggle", i: Number(i)} : a === "del" ? {type: "chk_del", i: Number(i)} : {type: "chk_" + a});
+    return true;
+  }
+  if (cmd === "mt") {
+    const [a, id, x] = p;
+    if (a === "shift") send({type: "mt_shift", id, months: Number(x)});
+    else if (a === "int") send({type: "mt_interval", id, months: Number(x)});
+    else send({type: "mt_" + a, id});
+    return true;
+  }
+  if (cmd === "mtadd") { exAddMaint(); return true; }
+  if (cmd === "mtint") { MT_NEW_INT = Number(p[0]); return true; }
+  if (cmd === "chkadd") { exAddCheck(); return true; }
+  if (cmd === "trip") { send(p[0] === "del" ? {type: "trip_del", id: p[1]} : {type: "trip_" + p[0]}); return true; }
+  if (cmd === "map") { mapCmd(p[0]); return true; }
+  if (cmd === "hr") { HRANGE = p[0]; send({type: "history", range: HRANGE}); return true; }
+  if (cmd === "wtog") { send({type: "warn_set", key: "toggle", value: p[0]}); return true; }
+  if (cmd === "wbool") { send({type: "warn_set", key: p[0], value: !(WCFG && WCFG[p[0]])}); return true; }
+  if (cmd === "wset") {
+    const cur = WCFG ? Number(WCFG[p[0]]) : 0;
+    if (WCFG) WCFG[p[0]] = cur + Number(p[1]);
+    send({type: "warn_set", key: p[0], value: cur + Number(p[1])}); return true;
+  }
+  if (cmd === "en") {
+    const k = p[0], d = Number(p[1]);
+    if (k === "bat") { const ah = Math.max(50, Math.round((FC && FC.cap_wh || 3840) / 12.8) + d); send({type: "energy_set", battery_wh: ah * 12.8}); }
+    if (k === "bat" && FC) FC.cap_wh = Math.max(50, Math.round(FC.cap_wh / 12.8) + d) * 12.8;
+    if (k === "pv") { const wp = Math.max(50, (FC && FC.pv_wp) || 400) + d; if (FC) FC.pv_wp = wp; send({type: "energy_set", pv_wp: wp}); }
+    return true;
+  }
+  if (cmd === "loc") { locAction(p); return true; }
+  if (cmd === "drv") { DRIVE_ALERT = null; drawDrive(); return true; }
+  return false;
+}
+
+function exEnter(){
+  if (EXTAB === "verlauf") send({type: "history", range: HRANGE});
+  if (EXTAB === "reise") { send({type: "trip_get"}); MAP.needFit = true; }
+  if (EXTAB === "handy") send({type: "net_info"});
+  if (EXTAB === "warn") send({type: "warn_cfg"});
+  schedule(true);
+}
+
+function exMessage(m){
+  if (m.type === "warnings") WARNS = m.list || [];
+  else if (m.type === "forecast") FC = m.forecast && m.forecast.text != null ? m.forecast : FC;
+  else if (m.type === "checklist") CHK = m;
+  else if (m.type === "maint") MAINT = m.items;
+  else if (m.type === "trip") { TRIP = m; mapDraw(); }
+  else if (m.type === "history") HISTD[m.range] = m;
+  else if (m.type === "net") { NET = m; }
+  else if (m.type === "warn_cfg") { WCFG = m.cfg; if (m.names) WNAMES = m.names; }
+  else if (m.type === "loc_results") { LOC.busy = false; LOC.res = m.results || []; LOC.err = !!m.error; drawLoc(); }
+  else if (m.type === "drive_alert") { DRIVE_ALERT = m; drawDrive(); }
+  else return false;
+  return true;
+}
+
+function exSkeleton(){
+  return `<div class="tabs" id="exTabs"></div>
+  <div class="exPane" id="ex-abfahrt"><div class="grid" style="grid-template-columns:1fr 360px;height:100%">
+    <div class="card" style="display:flex;flex-direction:column;min-height:0"><h3>Abfahrts-Checkliste · antippen zum Abhaken</h3>
+      <div class="scroll" data-keep="chk" style="flex:1;min-height:0"><div id="chkList"></div></div></div>
+    <div class="grid" style="align-content:start">
+      <div class="card" id="chkState"></div>
+      <div class="card"><h3>Punkt hinzufügen</h3>
+        <input type="text" id="chkNew" placeholder="z. B. Fahrräder gesichert">
+        <button class="btn sm" style="width:100%;margin-top:8px" data-tap="chkadd">Hinzufügen</button>
+        <div class="hint" style="margin-top:8px">Löschen: Mülleimer gedrückt halten.</div></div>
+      <div class="card"><div class="row" style="flex-wrap:wrap;gap:8px">
+        ${holdBtn("Alle zurücksetzen", "chk|reset", "sm")}${holdBtn("Standardliste", "chk|default", "sm")}</div>
+        <div class="hint" id="chkHint" style="margin-top:8px"></div></div>
+    </div></div></div>
+  <div class="exPane" id="ex-reise"><div class="grid" style="grid-template-columns:700px 1fr;height:100%">
+    <div id="mapBox" style="width:700px;height:556px">
+      <div id="mapTiles"></div><svg id="mapSvg" width="700" height="556"></svg>
+      <div class="mapCtl"><button data-tap="map|in">+</button><button data-tap="map|out">−</button><button data-tap="map|fit" style="font-size:16px">⤢</button></div>
+      <div class="mapAttr">© OpenStreetMap-Mitwirkende</div></div>
+    <div style="display:flex;flex-direction:column;min-height:0;gap:12px">
+      <div class="card" id="tripSum"></div>
+      <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0"><h3>Stellplätze</h3>
+        <div class="scroll" data-keep="stays" style="flex:1;min-height:0"><div id="tripStays"></div></div></div>
+    </div></div></div>
+  <div class="exPane" id="ex-verlauf"><div class="grid" style="grid-template-columns:1fr 330px;height:100%">
+    <div class="card" style="min-height:0"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">Verlauf</h3>
+      <div class="row" id="hrBtns" style="gap:6px"></div></div><div id="histCharts"></div></div>
+    <div class="scroll" data-keep="fc" style="min-height:0"><div class="grid" style="align-content:start">
+      <div class="card" id="fcCard"></div><div class="card" id="dayCard"></div></div></div>
+  </div></div>
+  <div class="exPane" id="ex-wartung"><div class="grid" style="grid-template-columns:1fr 330px;height:100%">
+    <div class="card" style="display:flex;flex-direction:column;min-height:0"><h3>Wartung und Prüfungen</h3>
+      <div class="scroll" data-keep="mt" style="flex:1;min-height:0"><div id="mtList"></div></div></div>
+    <div class="grid" style="align-content:start">
+      <div class="card"><h3>So geht's</h3><div class="hint" style="font-size:14px;line-height:1.5">
+        <b>Erledigt</b> gedrückt halten → nächster Termin wird automatisch berechnet.<br>
+        Mit <b>‹ ›</b> den Termin monatsweise verschieben.<br>
+        Erinnerung aufs Handy: 30 Tage, 7 Tage vorher und am Tag selbst.</div></div>
+      <div class="card"><h3>Eigener Eintrag</h3>
+        <input type="text" id="mtNew" placeholder="z. B. Zahnriemen">
+        <div class="row" style="gap:6px;margin-top:8px" id="mtNewInt"></div>
+        <button class="btn sm" style="width:100%;margin-top:8px" data-tap="mtadd">Hinzufügen</button></div>
+    </div></div></div>
+  <div class="exPane" id="ex-warn"><div class="grid" style="grid-template-columns:1fr 1fr;height:100%">
+    <div class="card" style="display:flex;flex-direction:column;min-height:0"><h3>Aktuelle Warnungen</h3>
+      <div class="scroll" data-keep="wl" style="flex:1;min-height:0"><div id="warnNow"></div></div></div>
+    <div class="card" style="display:flex;flex-direction:column;min-height:0"><h3>Einstellungen · Push aufs Handy</h3>
+      <div class="scroll" data-keep="wc" style="flex:1;min-height:0"><div id="warnCfg"></div></div></div>
+  </div></div>
+  <div class="exPane" id="ex-handy"><div class="grid" style="grid-template-columns:1fr 1fr;height:100%">
+    <div class="card" id="netCard"></div>
+    <div class="card scroll" data-keep="ts"><h3>Von unterwegs (Fernzugang)</h3><div id="tsCard"></div></div>
+  </div></div>`;
+}
+
+function updExtras(){
+  const pg = document.getElementById("pg-extras");
+  if (!document.getElementById("exTabs")) {
+    pg.innerHTML = exSkeleton();
+    for (const [id, fn] of [["chkNew", exAddCheck], ["mtNew", exAddMaint]])
+      document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") fn(); });
+    mapBind();
+  }
+  html("exTabs", EX_TABS.map(([id, t]) => `<button class="tab ${EXTAB === id ? "on" : ""}" data-tap="ex|${id}">${t}${
+    id === "warn" && WARNS.length ? ` <b class="tabBadge">${WARNS.length}</b>` : ""}${
+    id === "wartung" && MAINT && MAINT.some(x => x.left != null && x.left <= 30) ? ` <b class="tabBadge">!</b>` : ""}</button>`).join(""));
+  for (const [id] of EX_TABS) { const el = document.getElementById("ex-" + id); const d = EXTAB === id ? "" : "none"; if (el.style.display !== d) el.style.display = d; }
+  ({abfahrt: exAbfahrt, reise: exReise, verlauf: exVerlauf, wartung: exWartung, warn: exWarn, handy: exHandy})[EXTAB]();
+}
+
+// ------------------------------------------------------------ Abfahrt ----
+function exAddCheck(){
+  const el = document.getElementById("chkNew"); const t = el.value.trim();
+  if (!t) return; send({type: "chk_add", text: t}); el.value = ""; oskHide(); el.blur();
+}
+function exAbfahrt(){
+  const it = CHK ? CHK.items : [];
+  html("chkList", it.length ? it.map((x, i) => `<div class="chkRow ${x.done ? "done" : ""}" data-tap="chk|toggle|${i}">
+      <span class="chkBox">${x.done ? "✓" : ""}</span><span class="chkT">${esc(x.t)}</span>
+      <button class="iconBtn" data-hold="chk|del|${i}" onclick="event.stopPropagation()"><i class="fill"></i>🗑</button></div>`).join("")
+    : `<div class="empty">Keine Punkte – unten rechts „Standardliste“ gedrückt halten.</div>`);
+  const done = it.filter(x => x.done).length, all = it.length, ok = all && done === all;
+  html("chkState", `<h3>Status</h3><div class="mid" style="color:${ok ? "var(--green)" : "var(--orange)"}">${ok ? "✓ Bereit zur Abfahrt" : `${all - done} Punkt${all - done === 1 ? "" : "e"} offen`}</div>
+    <div class="bar" style="margin-top:10px"><i style="width:${all ? done / all * 100 : 0}%;background:${ok ? "var(--green)" : "var(--orange)"}"></i></div>
+    <div class="hint" style="margin-top:6px">${done} von ${all} erledigt${CHK && CHK.moving ? " · 🚐 Fahrt läuft" : ""}</div>`);
+  html("chkHint", CHK && CHK.gps ? "Beim Losfahren (GPS) meldet die Zentrale offene Punkte sofort – auch aufs Handy. 2 Stunden nach der Ankunft werden die Haken zurückgesetzt."
+    : "Mit einer GPS-Maus am Cerbo warnt die Zentrale beim Losfahren automatisch, wenn noch etwas offen ist.");
+}
+
+// ------------------------------------------------------------- Reise ----
+const MAP = {z: 6, cx: 0, cy: 0, needFit: true, drag: null, W: 700, H: 556};
+const lon2x = (lon, z) => (lon + 180) / 360 * 256 * 2 ** z;
+const lat2y = (lat, z) => { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 256 * 2 ** z; };
+function mapPts(){
+  const p = [];
+  if (TRIP) { for (const t of TRIP.track) p.push(t); for (const s of TRIP.stays) p.push([s.lat, s.lon]); }
+  const L = WX && WX.loc; if (L) p.push([L.lat, L.lon]);
+  return p;
+}
+function mapFit(){
+  const p = mapPts();
+  if (!p.length) { p.push([51.3, 10.4]); }
+  const la = p.map(x => x[0]), lo = p.map(x => x[1]);
+  const [a0, a1, o0, o1] = [Math.min(...la), Math.max(...la), Math.min(...lo), Math.max(...lo)];
+  let z = 15;
+  if (p.length === 1) z = 11;
+  else for (; z > 3; z--) if (lon2x(o1, z) - lon2x(o0, z) < MAP.W - 80 && lat2y(a0, z) - lat2y(a1, z) < MAP.H - 80) break;
+  MAP.z = z; MAP.cx = (lon2x(o0, z) + lon2x(o1, z)) / 2; MAP.cy = (lat2y(a0, z) + lat2y(a1, z)) / 2; MAP.needFit = false;
+}
+function mapCmd(c){
+  if (c === "fit") { mapFit(); mapDraw(); return; }
+  const nz = Math.max(3, Math.min(18, MAP.z + (c === "in" ? 1 : -1)));
+  const k = 2 ** (nz - MAP.z); MAP.cx *= k; MAP.cy *= k; MAP.z = nz; mapDraw();
+}
+function mapBind(){
+  const box = document.getElementById("mapBox");
+  box.addEventListener("pointerdown", e => { if (e.target.closest(".mapCtl")) return; MAP.drag = {x: e.clientX, y: e.clientY, cx: MAP.cx, cy: MAP.cy}; box.setPointerCapture(e.pointerId); });
+  box.addEventListener("pointermove", e => { if (!MAP.drag) return; const s = STAGE_S || 1;
+    MAP.cx = MAP.drag.cx - (e.clientX - MAP.drag.x) / s; MAP.cy = MAP.drag.cy - (e.clientY - MAP.drag.y) / s; mapDraw(); });
+  const up = () => { MAP.drag = null; }; box.addEventListener("pointerup", up); box.addEventListener("pointercancel", up);
+}
+function mapDraw(){
+  const tl = document.getElementById("mapTiles"), sv = document.getElementById("mapSvg");
+  if (!tl || EXTAB !== "reise") return;
+  if (MAP.needFit) mapFit();
+  const {z, W, H} = MAP, x0 = MAP.cx - W / 2, y0 = MAP.cy - H / 2, n = 2 ** z;
+  let tiles = "";
+  for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + H) / 256); ty++) {
+    if (ty < 0 || ty >= n) continue;
+    for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + W) / 256); tx++) {
+      const wx = ((tx % n) + n) % n;
+      tiles += `<img src="https://tile.openstreetmap.org/${z}/${wx}/${ty}.png" onerror="this.style.visibility='hidden'" style="left:${Math.round(tx * 256 - x0)}px;top:${Math.round(ty * 256 - y0)}px" alt="">`;
+    }
+  }
+  if (tl.dataset.k !== tiles) { tl.innerHTML = tiles; tl.dataset.k = tiles; }
+  const P = (la, lo) => [(lon2x(lo, z) - x0).toFixed(1), (lat2y(la, z) - y0).toFixed(1)];
+  let g = "";
+  if (TRIP && TRIP.track.length > 1) g += `<polyline points="${TRIP.track.map(p => P(p[0], p[1]).join(",")).join(" ")}" fill="none" stroke="#3ba3ff" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>`;
+  if (TRIP) TRIP.stays.forEach((s, i) => { const [x, y] = P(s.lat, s.lon);
+    g += `<g transform="translate(${x},${y})"><circle r="13" fill="#ff8a3d" stroke="#fff" stroke-width="2"/><text y="5" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">${i + 1}</text></g>`; });
+  const L = WX && WX.loc;
+  if (L) { const [x, y] = P(L.lat, L.lon); g += `<circle cx="${x}" cy="${y}" r="18" fill="#34e39b" opacity=".25"/><circle cx="${x}" cy="${y}" r="8" fill="#34e39b" stroke="#fff" stroke-width="3"/>`; }
+  sv.innerHTML = g;
+}
+function exReise(){
+  if (MAP.needFit || !document.getElementById("mapTiles").innerHTML) mapDraw();
+  const st = TRIP ? TRIP.stays : [];
+  const nights = s => { const e = s.until ? s.until * 1000 : Date.now(); return Math.max(0, Math.round((e - s.t * 1000) / DAYMS)); };
+  const L = WX && WX.loc;
+  html("tripSum", `<h3>Reisetagebuch</h3><div class="row" style="gap:24px">
+      <div><div class="mid">${fp(TRIP ? TRIP.km_total : null, 0, "km")}</div><div class="hint">gefahren (GPS)</div></div>
+      <div><div class="mid">${st.length}</div><div class="hint">Stellplätze</div></div></div>
+    <button class="btn sm sel" style="width:100%;margin-top:10px" data-tap="trip|here">📍 Aktuellen Ort als Stellplatz eintragen</button>
+    <div class="hint" style="margin-top:6px">${TRIP && TRIP.gps ? "GPS aktiv: Strecke und Stellplätze (ab 1 Stunde Standzeit) werden automatisch aufgezeichnet."
+      : `Ohne GPS wird nichts automatisch aufgezeichnet. Aktueller Ort: ${esc(PLACE || "--")}${L ? " (" + esc(L.src_txt) + ")" : ""}.`}</div>`);
+  html("tripStays", st.length ? st.map((s, i) => ({s, i})).reverse().map(({s, i}) => `<div class="stay">
+      <span class="stayN">${i + 1}</span><div style="flex:1;min-width:0"><div style="font-weight:650;font-size:16px">${esc(s.place)}</div>
+      <div class="hint">${dShort(s.t * 1000)}${s.until ? " – " + dShort(s.until * 1000) : " · jetzt hier"} · ${nights(s)} Nacht${nights(s) === 1 ? "" : "e"}${s.temp != null ? " · " + fp(s.temp, 0, "°C") : ""}</div></div>
+      <button class="iconBtn" data-hold="trip|del|${s.id}"><i class="fill"></i>🗑</button></div>`).join("")
+    : `<div class="empty" style="font-size:15px">Noch keine Stellplätze.</div>`);
+}
+
+// ----------------------------------------------------------- Verlauf ----
+function lineChart(pts, series, H, yMin, yMax, unit){
+  const W = 740, L = 46, R = 8, T = 10, B = 20;
+  if (!pts.length) return "";
+  const t0 = pts[0][0], t1 = pts[pts.length - 1][0] || t0 + 1;
+  const X = t => L + (W - L - R) * (t - t0) / Math.max(1, t1 - t0);
+  if (yMax == null) { yMax = 10; for (const p of pts) for (const s of series) if (p[s.k] != null) yMax = Math.max(yMax, p[s.k]); yMax *= 1.1; }
+  const Y = v => T + (H - T - B) * (1 - (v - yMin) / (yMax - yMin || 1));
+  let g = "";
+  for (let k = 0; k <= 4; k++) { const v = yMin + (yMax - yMin) * k / 4, y = Y(v).toFixed(1);
+    g += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#243241"/><text x="${L - 6}" y="${+y + 4}" text-anchor="end">${Math.round(v)}${unit}</text>`; }
+  const span = t1 - t0, stepH = span > 2 * 86400 ? 86400 : span > 12 * 3600 ? 4 * 3600 : 3600;
+  for (let t = Math.ceil(t0 / stepH) * stepH; t <= t1; t += stepH) { const d = new Date(t * 1000);
+    g += `<text x="${X(t).toFixed(1)}" y="${H - 4}" text-anchor="middle">${stepH === 86400 ? WDAY[d.getDay()] : pad(d.getHours()) + ":00"}</text>`; }
+  for (const s of series) {
+    let d = "", pen = false;
+    for (const p of pts) { if (p[s.k] == null) { pen = false; continue; } d += `${pen ? "L" : "M"}${X(p[0]).toFixed(1)} ${Y(Math.min(yMax, Math.max(yMin, p[s.k]))).toFixed(1)}`; pen = true; }
+    if (s.area && d) g += `<path d="${d} L${X(t1).toFixed(1)} ${Y(yMin)} L${L} ${Y(yMin)} Z" fill="${s.c}" opacity=".18"/>`;
+    g += `<path d="${d}" fill="none" stroke="${s.c}" stroke-width="2.2"/>`;
+  }
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" width="100%" height="${H}">${g}</svg>`;
+}
+function exVerlauf(){
+  html("hrBtns", [["24h", "24 Stunden"], ["7d", "7 Tage"]].map(([k, t]) => `<button class="btn sm ${HRANGE === k ? "sel" : ""}" data-tap="hr|${k}">${t}</button>`).join(""));
+  const h = HISTD[HRANGE];
+  const pts = h ? h.pts : [];
+  html("histCharts", !h ? `<div class="empty">Lade Verlauf ...</div>` : pts.length < 2 ? `<div class="empty">Noch zu wenig Daten – der Verlauf wird ab jetzt jede Minute aufgezeichnet.</div>` :
+    `<div class="hint">Ladezustand Akku</div>${lineChart(pts, [{k: 1, c: "#34e39b", area: true}], 160, 0, 100, "%")}
+     <div class="row hint" style="gap:16px;margin-top:4px"><span style="color:#ffc233">■ Solar</span><span style="color:#ff8a8a">■ Verbrauch</span><span style="color:#3fd2e0">■ Landstrom</span></div>
+     ${lineChart(pts, [{k: 2, c: "#ffc233", area: true}, {k: 3, c: "#ff8a8a"}, {k: 5, c: "#3fd2e0"}], 250, 0, null, " W")}`);
+  const F = FC;
+  html("fcCard", `<h3>Akku-Prognose</h3>${!F ? `<div class="mute">Wird berechnet ...</div>` : `
+    <div class="mid" style="color:${F.shore ? "var(--cyan)" : F.hours != null && F.hours < 24 ? "var(--orange)" : "var(--green)"}">${esc(F.text || "--")}</div>
+    <div class="kv" style="font-size:14px;margin-top:10px">
+      <span>Ladezustand</span><span>${fp(F.soc, 0, "%")}</span>
+      <span>Verbrauch (${esc(F.load_src || "")})</span><span>${fp(F.load_w, 0, "W")}</span>
+      <span>Solar heute (Rest)</span><span>${fp((F.pv_today_wh || 0) / 1000, 1, "kWh")}</span>
+      <span>Solar morgen</span><span>${fp((F.pv_tomorrow_wh || 0) / 1000, 1, "kWh")}</span>
+      ${F.full_in != null ? `<span>Akku voll in</span><span>ca. ${fp(F.full_in, 0, "Std.")}</span>` : ""}
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:10px"><span class="hint">Akku-Kapazität<br>${esc(F.cap_src || "")}</span>
+      <div class="step"><button class="btn sm" data-tap="en|bat|-10">−</button><b>${fp((F.cap_wh || 0) / 12.8, 0, "Ah")}</b><button class="btn sm" data-tap="en|bat|10">+</button></div></div>
+    <div class="row" style="justify-content:space-between;margin-top:8px"><span class="hint">Solarleistung<br>${esc(F.pv_src || "")}</span>
+      <div class="step"><button class="btn sm" data-tap="en|pv|-50">−</button><b>${fp(F.pv_wp || 400, 0, "Wp")}</b><button class="btn sm" data-tap="en|pv|50">+</button></div></div>
+    <div class="hint" style="margin-top:8px">Die Solar-Vorhersage lernt nach ein paar sonnigen Tagen selbst, wie viel deine Module wirklich bringen.</div>`}`);
+  const days = h ? h.days.slice(-7).reverse() : [];
+  html("dayCard", `<h3>Tagesbilanz</h3>${days.length ? `<table><tr><td></td><td style="text-align:right">Solar</td><td style="text-align:right">Verbr.</td><td>Min.</td></tr>
+    ${days.map(d => `<tr><td>${dShort(d.day + "T12:00")}</td><td style="text-align:right;color:#ffc233">${fp(d.pv_wh / 1000, 2)}</td><td style="text-align:right;color:#ff8a8a">${fp(d.load_wh / 1000, 2)}</td><td>${fp(d.min_soc, 0, "%")}</td></tr>`).join("")}
+    </table><div class="hint" style="margin-top:6px">Werte in kWh</div>` : `<div class="mute">Noch keine Daten.</div>`}`);
+}
+
+// ----------------------------------------------------------- Wartung ----
+let MT_NEW_INT = 12;
+function exAddMaint(){
+  const el = document.getElementById("mtNew"); const t = el.value.trim();
+  if (!t) return; send({type: "mt_add", name: t, months: MT_NEW_INT}); el.value = ""; oskHide(); el.blur();
+}
+function exWartung(){
+  const items = MAINT || [];
+  html("mtList", items.length ? items.map(x => {
+    const cls = x.left == null ? "none" : x.left < 0 ? "due" : x.left <= 30 ? "soon" : "ok";
+    const lt = x.left == null ? "kein Termin" : x.left < 0 ? `${-x.left} Tage überfällig` : x.left === 0 ? "heute" : x.left <= 60 ? `in ${x.left} Tagen` : `in ${Math.round(x.left / 30)} Monaten`;
+    return `<div class="mtRow"><div><div class="mtName">${esc(x.name)}</div>
+        <div class="mtSub">alle ${x.months} Monate${x.last ? " · zuletzt " + dDE(x.last) : ""}</div></div>
+      <div style="text-align:center"><div style="font-size:16px;font-weight:600">${x.due ? dDE(x.due) : "--"}</div><span class="pill ${cls}">${lt}</span></div>
+      <div class="row" style="gap:4px"><button class="btn sm" data-tap="mt|shift|${x.id}|-1">‹</button><button class="btn sm" data-tap="mt|shift|${x.id}|1">›</button></div>
+      <div class="row" style="gap:6px">${holdBtn("Erledigt", "mt|done|" + x.id, "sm sel green")}<button class="iconBtn" data-hold="mt|del|${x.id}"><i class="fill"></i>🗑</button></div></div>`;
+  }).join("") : `<div class="empty">Keine Einträge</div>`);
+  html("mtNewInt", [6, 12, 24, 36].map(m => `<button class="btn sm ${MT_NEW_INT === m ? "sel" : ""}" data-tap="mtint|${m}" style="flex:1">${m} Mon.</button>`).join(""));
+}
+
+// --------------------------------------------------------- Warnungen ----
+const W_SET = {soc: ["soc_low", 5, "%", "unter"], fresh: ["fresh_low", 5, "%", "unter"], grey: ["grey_high", 5, "%", "über"], black: ["black_high", 5, "%", "über"],
+  freezer: ["freezer_max", 1, "°C", "über"], fridge: ["fridge_max", 1, "°C", "über"], frost: ["frost_temp", 1, "°C", "bis"], storm: ["gust_kmh", 5, "km/h", "ab"]};
+function exWarn(){
+  html("warnNow", WARNS.length ? WARNS.map(w => `<div class="warnItem"><b>${esc(w.title)}</b><span>${esc(w.text)}</span>
+      <div class="hint" style="margin-top:4px">seit ${new Date(w.since * 1000).toLocaleTimeString("de-DE", {hour: "2-digit", minute: "2-digit"})} Uhr</div></div>`).join("")
+    : `<div class="empty" style="color:var(--green)">✓ Alles in Ordnung</div>`);
+  if (!WCFG) { html("warnCfg", `<div class="mute">Lade ...</div>`); return; }
+  const c = WCFG, off = new Set(c.off || []);
+  const ids = ["soc", "soc_crit", "fresh", "grey", "black", "shore", "freezer", "fridge", "frost", "storm"];
+  html("warnCfg", `<div class="wRow"><div><b>Warnungen aktiv</b></div><span></span><button class="tog ${c.enabled ? "on" : ""}" data-tap="wbool|enabled">${c.enabled ? "AN" : "AUS"}</button></div>
+    <div class="wRow"><div><b>Push aufs Handy</b><div class="hint">über die ntfy-App</div></div><span></span><button class="tog ${c.push !== false ? "on" : ""}" data-tap="wbool|push">${c.push !== false ? "AN" : "AUS"}</button></div>` +
+    ids.map(id => { const s = W_SET[id], on = !off.has(id) && (id !== "shore" || c.shore_lost);
+      return `<div class="wRow ${on ? "" : "off"}"><div><b>${esc(WNAMES[id] || id)}</b>${id === "soc_crit" ? `<div class="hint">bei der Hälfte von „Akku niedrig“</div>` : id === "shore" ? `<div class="hint">nicht, wenn „Stromkabel abgesteckt“ abgehakt ist</div>` : ""}</div>
+        ${s ? `<div class="step"><button class="btn sm" data-tap="wset|${s[0]}|-${s[1]}">−</button><b>${s[3]} ${fp(c[s[0]], 0)} ${s[2]}</b><button class="btn sm" data-tap="wset|${s[0]}|${s[1]}">+</button></div>` : "<span></span>"}
+        <button class="tog ${on ? "on" : ""}" data-tap="${id === "shore" ? "wbool|shore_lost" : "wtog|" + id}">${on ? "AN" : "AUS"}</button></div>`; }).join(""));
+}
+
+// ------------------------------------------------------------- Handy ----
+let QR_LIB = null;
+function loadQr(cb){
+  if (window.qrcode) return cb();
+  if (QR_LIB) return;
+  QR_LIB = document.createElement("script");
+  QR_LIB.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
+  QR_LIB.onload = () => { cb(); schedule(true); };
+  QR_LIB.onerror = () => { QR_LIB = null; };
+  document.head.appendChild(QR_LIB);
+}
+function qrSvg(text){
+  if (!window.qrcode) { loadQr(() => {}); return `<div class="mute" style="color:#333">QR-Code lädt ...</div>`; }
+  const q = qrcode(0, "M"); q.addData(text); q.make();
+  return q.createSvgTag({cellSize: 6, margin: 2, scalable: true});
+}
+function exHandy(){
+  const N = NET;
+  const port = N ? N.port : (location.port || 8080);
+  const url = N && N.lan.length ? `http://${N.lan[0]}:${port}` : location.origin;
+  html("netCard", `<h3>Zentrale auf dem Handy öffnen</h3>
+    <div class="row" style="gap:20px;align-items:flex-start"><div class="qrBox">${qrSvg(url)}</div>
+    <div style="flex:1"><div class="hint">1. Handy ins gleiche WLAN wie der Pi</div><div class="hint">2. QR-Code mit der Kamera scannen – oder eintippen:</div>
+      <div class="urlBig" style="margin:10px 0">${esc(url)}</div>
+      ${N && N.lan.length > 1 ? `<div class="hint">Weitere Adressen: ${N.lan.slice(1).map(x => esc(`http://${x}:${port}`)).join(", ")}</div>` : ""}
+      ${N ? `<div class="hint" style="margin-top:6px">Oder: <b>http://${esc(N.host)}.local:${port}</b></div>` : ""}
+      <div class="hint" style="margin-top:12px">Tipp: Im Handy-Browser „Zum Startbildschirm hinzufügen“ – dann startet die Zentrale wie eine App.</div></div></div>
+    <div class="warnbox" style="margin-top:14px;font-size:14px">Jeder im selben WLAN kann die Zentrale öffnen. Auf Campingplätzen mit offenem WLAN deshalb lieber den Fernzugang rechts nutzen.</div>`);
+  const ts = N && N.tailscale.length ? `http://${N.tailscale[0]}:${port}` : null;
+  html("tsCard", ts ? `<div class="mid" style="color:var(--green)">✓ Fernzugang aktiv</div>
+      <div class="hint" style="margin-top:8px">Auf dem Handy die Tailscale-App öffnen (gleiches Konto) und dann aufrufen:</div>
+      <div class="urlBig" style="margin:10px 0">${esc(ts)}</div><div class="hint">Funktioniert überall – auch von zu Hause, solange der Pi Internet hat.</div>`
+    : `<div class="hint" style="font-size:15px;line-height:1.55">Mit <b>Tailscale</b> (kostenlos) erreichst du die Zentrale von überall – sicher und verschlüsselt, ohne Router-Einstellungen.<br><br>
+      <b>1.</b> Auf dem Pi im Terminal eingeben:<span class="code">curl -fsSL https://tailscale.com/install.sh | sh</span>
+      <b>2.</b> Danach:<span class="code">sudo tailscale up</span>Es erscheint ein Link – den am Handy öffnen und mit Google oder Apple anmelden.<br>
+      <b>3.</b> Die App <b>Tailscale</b> aufs Handy laden und mit dem gleichen Konto anmelden.<br><br>
+      Danach steht hier die Adresse für unterwegs.</div>`);
+}
+
+// ------------------------------------------------- Ort wählen (Wetter) ----
+function locAction(p){
+  if (p[0] === "open") { LOC.open = true; LOC.res = null; LOC.err = false; drawLoc(); setTimeout(() => { const i = document.getElementById("locQ"); if (i) i.focus(); }, 50); }
+  else if (p[0] === "close") { LOC.open = false; drawLoc(); oskHide(); }
+  else if (p[0] === "search") locSearch();
+  else if (p[0] === "pick") { const r = LOC.res && LOC.res[Number(p[1])]; if (r) { send({type: "loc_set", lat: r.lat, lon: r.lon, name: r.name}); PLACE = r.name; LOC.open = false; drawLoc(); oskHide(); } }
+  else if (p[0] === "auto") { send({type: "loc_auto"}); LOC.open = false; drawLoc(); oskHide(); }
+}
+function locSearch(){
+  const i = document.getElementById("locQ"); const q = i ? i.value.trim() : "";
+  if (q.length < 2) return;
+  LOC.busy = true; LOC.q = q; LOC.res = null; drawLoc(); oskHide(); if (i) i.blur();
+  send({type: "loc_search", q});
+}
+function drawLoc(){
+  let el = document.getElementById("locBox");
+  if (!el) {
+    document.getElementById("stage").insertAdjacentHTML("beforeend", `<div id="locBox"><div class="card" style="width:640px;max-height:640px;display:flex;flex-direction:column">
+      <h3>Ort für das Wetter</h3>
+      <div class="row"><input type="text" id="locQ" placeholder="Ort eingeben, z. B. Issum"><button class="btn sel" style="height:46px" data-tap="loc|search">Suchen</button></div>
+      <div id="locRes" class="scroll" style="margin-top:10px;max-height:330px"></div>
+      <div class="row" style="margin-top:12px;gap:10px"><button class="btn" style="flex:1" data-tap="loc|auto">📡 Automatisch (GPS / WLAN / Internet)</button>
+        <button class="btn" data-tap="loc|close">Schließen</button></div>
+      <div class="hint" id="locInfo" style="margin-top:8px"></div></div></div>`);
+    el = document.getElementById("locBox");
+    document.getElementById("locQ").addEventListener("keydown", e => { if (e.key === "Enter") locSearch(); });
+  }
+  el.style.display = LOC.open ? "flex" : "none";
+  if (!LOC.open) return;
+  html("locRes", LOC.busy ? `<div class="mute">Suche „${esc(LOC.q)}“ ...</div>` : LOC.err ? `<div class="mute">Suche gerade nicht möglich (keine Internetverbindung?).</div>`
+    : LOC.res ? (LOC.res.length ? LOC.res.map((r, i) => `<button class="btn locRes" data-tap="loc|pick|${i}"><b>${esc(r.name)}</b> <span class="mute" style="font-size:14px">${esc(r.detail)}</span></button>`).join("")
+      : `<div class="mute">Nichts gefunden.</div>`) : "");
+  const L = WX && WX.loc;
+  html("locInfo", L ? `Jetzt: <b>${esc(PLACE)}</b> · Quelle: ${esc(L.src_txt)}${L.acc ? ` (±${Math.round(L.acc)} m)` : ""}. ${L.manual ? "Ein fest gewählter Ort gilt, bis du „Automatisch“ tippst – GPS hat aber immer Vorrang." : ""}` : "");
+}
+
+// -------------------------------------------------- Abfahrts-Warnung ----
+function drawDrive(){
+  let el = document.getElementById("driveBox");
+  if (!el) {
+    document.getElementById("stage").insertAdjacentHTML("beforeend", `<div id="driveBox"><div class="card" style="width:720px;border-color:var(--red);text-align:center" id="driveCard"></div></div>`);
+    el = document.getElementById("driveBox");
+  }
+  el.style.display = DRIVE_ALERT ? "flex" : "none";
+  if (!DRIVE_ALERT) return;
+  sleepReset && sleepReset();
+  const o = DRIVE_ALERT.open || [];
+  html("driveCard", `<div style="font-size:52px">🚐</div><div class="big" style="font-size:40px;color:var(--red)">Achtung – Abfahrt!</div>
+    ${DRIVE_ALERT.shore ? `<div class="mid" style="color:var(--red);margin-top:14px">⚡ Landstromkabel ist noch eingesteckt!</div>` : ""}
+    ${o.length ? `<div style="margin-top:14px;font-size:20px">Noch nicht abgehakt:</div><div style="font-size:19px;margin-top:6px;line-height:1.5;color:#ffd2b5">${o.map(esc).join("<br>")}</div>` : ""}
+    <button class="btn sel" style="margin-top:20px;width:240px" data-tap="drv|ok">OK</button>`);
+}
+
+// ---------------------------------------------------------- Demo ----
+function demoExtrasData(){
+  FC = {soc: 78, cap_wh: 3840, cap_src: "LiTime-Akkus", load_w: 62, load_src: "Ø 24 h", pv_src: "geschätzt (400 Wp)", shore: false, hours: 61, full_in: null,
+    pv_today_wh: 640, pv_tomorrow_wh: 1100, text: "reicht noch ca. 2,5 Tage", pv_wp: 400};
+  CHK = {items: ["Hubstützen eingefahren", "Dachluken und Fenster zu", "Markise eingefahren", "Stromkabel abgesteckt", "Sat-Schüssel eingefahren", "Trittstufe eingefahren",
+    "Gas zu (oder Fahrtbetrieb erlaubt)", "Kühlschrank verriegelt", "Schränke und Türen verriegelt", "Abwasser-Schieber zu", "Keile eingesammelt", "Lose Teile gesichert"]
+    .map((t, i) => ({t, done: i < 4})), moving: false, gps: true};
+  const dd = m => { const d = new Date(); d.setDate(d.getDate() + m); return d.toISOString().slice(0, 10); };
+  MAINT = [["Gasprüfung (G 607)", 24, 12], ["Hauptuntersuchung (TÜV)", 24, 95], ["Dichtigkeitsprüfung Aufbau", 12, -5], ["Ölwechsel Iveco", 12, 200], ["Alde: Glykol prüfen", 24, null]]
+    .map(([name, months, l], i) => ({id: "d" + i, name, months, due: l == null ? null : dd(l), last: null, left: l}));
+  WARNS = [{id: "grey", title: "🚿 Grauwasser fast voll", text: "Grauwasser: 88 % – bald entleeren.", since: Date.now() / 1000 - 1800}];
+  WCFG = {enabled: true, push: true, soc_low: 20, fresh_low: 10, grey_high: 85, black_high: 85, shore_lost: true, freezer_max: -10, fridge_max: 10, frost_temp: 1, gust_kmh: 60, off: []};
+  WNAMES = {soc: "Akku niedrig", soc_crit: "Akku fast leer", fresh: "Frischwasser fast leer", grey: "Grauwasser fast voll", black: "Toilette fast voll", shore: "Landstrom ausgefallen",
+    freezer: "Gefrierfach zu warm", fridge: "Kühlschrank zu warm", frost: "Frostwarnung", storm: "Sturmwarnung"};
+  const route = [[51.52, 6.33], [51.54, 6.43], [51.62, 6.60], [51.84, 6.85], [52.10, 7.02], [52.30, 7.40], [52.62, 7.45], [53.05, 7.20], [53.37, 7.22], [53.56, 7.10]];
+  const t0 = Date.now() / 1000 - 9 * 86400;
+  TRIP = {track: route, km_total: 312, gps: true, stays: [
+    {id: "s1", place: "Xanten", lat: 51.66, lon: 6.45, t: t0, until: t0 + 2 * 86400, temp: 11},
+    {id: "s2", place: "Haltern am See", lat: 51.74, lon: 7.18, t: t0 + 2 * 86400, until: t0 + 5 * 86400, temp: 9},
+    {id: "s3", place: "Norddeich", lat: 53.62, lon: 7.16, t: t0 + 6 * 86400, until: null, temp: 8}]};
+  WX.loc = {lat: 51.52, lon: 6.33, src: "gps", src_txt: "GPS", acc: null, manual: false};
+  const pts = [], now = Math.floor(Date.now() / 1000);
+  for (let t = now - 7 * 86400; t <= now; t += 1800) { const h = new Date(t * 1000).getHours();
+    const pv = h >= 8 && h <= 16 ? Math.round(320 * Math.sin((h - 8) / 8 * Math.PI) * (0.6 + 0.4 * Math.sin(t / 50000))) : 0;
+    pts.push([t, Math.round(60 + 25 * Math.sin((t - now) / 86400 * 2 * Math.PI)), pv, 40 + Math.round(30 * Math.random()), null, null]); }
+  const days = []; for (let k = 6; k >= 0; k--) days.push({day: new Date(Date.now() - k * DAYMS).toISOString().slice(0, 10), pv_wh: 900 + k * 120, load_wh: 1400 - k * 50, grid_wh: 0, min_soc: 52 + k});
+  HISTD["7d"] = {range: "7d", pts, days}; HISTD["24h"] = {range: "24h", pts: pts.slice(-48), days};
+  NET = {lan: ["192.168.8.42"], tailscale: [], host: "Schmetter", port: 8080};
+}
+function demoExtrasCmd(m){
+  const t = m.type || "";
+  if (t === "chk_toggle") CHK.items[m.i].done = !CHK.items[m.i].done;
+  else if (t === "chk_reset") CHK.items.forEach(x => x.done = false);
+  else if (t === "chk_add") CHK.items.push({t: m.text, done: false});
+  else if (t === "chk_del") CHK.items.splice(m.i, 1);
+  else if (t === "mt_done") { const x = MAINT.find(x => x.id === m.id); x.left = x.months * 30; x.last = new Date().toISOString().slice(0, 10); }
+  else if (t === "mt_shift") { const x = MAINT.find(x => x.id === m.id); x.left = (x.left ?? 0) + 30 * m.months; }
+  else if (t === "mt_del") MAINT = MAINT.filter(x => x.id !== m.id);
+  else if (t === "mt_add") MAINT.push({id: "n" + Date.now(), name: m.name, months: m.months, due: null, left: null});
+  else if (t === "energy_set") { if (m.pv_wp) FC.pv_wp = m.pv_wp; if (m.battery_wh) FC.cap_wh = m.battery_wh; }
+  else if (t === "history" || t === "net_info" || t === "warn_cfg") {}
+  else if (t === "warn_set") { if (m.key === "toggle") { const o = new Set(WCFG.off); o.has(m.value) ? o.delete(m.value) : o.add(m.value); WCFG.off = [...o]; } else WCFG[m.key] = m.value; }
+  else if (t === "loc_search") setTimeout(() => exMessage({type: "loc_results", results: [{name: "Issum", detail: "Kreis Kleve, Nordrhein-Westfalen, Deutschland", lat: 51.5389, lon: 6.4238}]}), 600);
+  else if (t === "loc_set") { WX.loc = {lat: m.lat, lon: m.lon, src: "manuell", src_txt: "fest gewählt", manual: true}; WX.loc_source = "manuell"; }
+  else if (t === "trip_here") TRIP.stays.push({id: "h" + Date.now(), place: PLACE, lat: 51.52, lon: 6.33, t: Date.now() / 1000, until: null});
+  else if (t === "trip_del") TRIP.stays = TRIP.stays.filter(s => s.id !== m.id);
+  else if (t === "trip_get") mapDraw();
+  else return false;
+  return true;
+}
+
+const RENDER = {start:updStart, energy:updEnergy, batt:updBatt, ac:updAc, tanks:updTanks, sw:updSw, level:updLevel, klima:updKlima, clock:updClock, radio:updRadio, wx:updWx, sys:updSys, extras:updExtras};
 let queued = false, lastPaint = 0;
 function schedule(force){
   if (queued) return;
@@ -1909,8 +2448,10 @@ function schedule(force){
 setInterval(schedule, 5000);
 
 // An Bildschirm anpassen (gestaltet für 1280 × 720)
+let STAGE_S = 1;
 function fit(){
   const s = Math.min(innerWidth / 1280, innerHeight / 720);
+  STAGE_S = s;
   const st = document.getElementById("stage");
   // "zoom" statt "transform: scale" -> Schrift und Symbole werden scharf neu gezeichnet statt hochgerechnet
   if (CSS.supports("zoom", "1")) {
@@ -1986,6 +2527,7 @@ function startDemo(){
     schedule();
   }, 2000);
   demoExtras();
+  demoExtrasData();
   schedule(true);
 }
 function demoExtras(){
@@ -2001,6 +2543,7 @@ function demoExtras(){
   setInterval(() => { LEVEL.roll = Math.round((LEVEL.roll + (Math.random() - .5) * .1) * 100) / 100; if (cur === "level") schedule(); }, 1000);
 }
 function demoCommand(m){
+  if (demoExtrasCmd(m)) return;
   if (m.type === "ac_set") { for (const k in m) if (k !== "type") AC[k] = m[k]; return; }
   if (m.type === "guard") { GUARD.armed = m.armed; GUARD.triggered = false; return; }
   if (m.type === "bat_scan") { setTimeout(() => { BATSCAN.busy = false; BATSCAN.searched = true; BATSCAN.found = [

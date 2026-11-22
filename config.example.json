@@ -10,7 +10,8 @@
     "fallback_lat": 51.52,
     "fallback_lon": 6.33,
     "fallback_name": "Geldern",
-    "auto_location": true
+    "auto_location": true,
+    "manual": null
   },
   "shr": {
     "enabled": false,
@@ -69,5 +70,28 @@
   "auto_update": true,
   "fullscreen_pin": "3784",
   "update_interval_min": 5,
-  "screen_timeout_min": 0
+  "screen_timeout_min": 0,
+  "warnings": {
+    "enabled": true,
+    "push": true,
+    "soc_low": 20,
+    "fresh_low": 10,
+    "grey_high": 85,
+    "black_high": 85,
+    "shore_lost": true,
+    "freezer_max": -10,
+    "fridge_max": 10,
+    "frost_temp": 1,
+    "gust_kmh": 60,
+    "off": []
+  },
+  "energy": {
+    "battery_wh": 0,
+    "pv_wp": 0,
+    "min_soc": 10,
+    "nominal_v": 12.8
+  },
+  "checklist": {
+    "auto_reset": true
+  }
 }

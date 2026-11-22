@@ -14,9 +14,10 @@ Raspberry Pi mit 7-Zoll-Touchdisplay. Zeigt alles vom Cerbo GX, das Wetter am ak
 | **Klima** | Gree-Dachklimaanlage: Ein/Aus, Solltemperatur, Kühlen/Heizen/Entfeuchten/Lüften/Auto, Lüfterstufe, Leise, Turbo, Licht; alle Temperatur- und Feuchtesensoren |
 | **Schalter** | Relais des Cerbo, schaltbare Ausgänge, Ladebooster (Orion XS), Ladegeräte, digitale Eingänge (Tür, Klappen) |
 | **Niveau** | Wasserwaage quer und längs mit Keil-Angabe in cm, Kalibrieren; SHR AutoLevel (Auto-Nivellieren, Einfahren); **Bewegungsalarm mit Push aufs Handy** |
-| **Wetter** | aktuell, 24-Stunden-Verlauf mit Regenwahrscheinlichkeit, 7 Tage, Böen, Sonnenauf- und -untergang, UV |
+| **Wetter** | aktuell, 24-Stunden-Verlauf mit Regenwahrscheinlichkeit, 7 Tage, Böen, Sonnenauf- und -untergang, UV. Der Ort kommt automatisch (GPS → WLAN-Ortung → Internet) oder per **„📍 Ort ändern“** |
 | **Uhr** | große Uhr, Timer mit Schnellwahl, Wecker mit Wochentagen und Schlummern |
 | **Radio** | Webradio: Top-Sender Deutschland, Pop, Rock, Schlager, Nachrichten, Oldies, 80er, Jazz, Klassik; Favoriten |
+| **Extras** | **Abfahrt** (Checkliste, Warnung beim Losfahren), **Reisekarte** (Strecke und Stellplätze), **Verlauf** (Akku, Solar, Verbrauch, Akku-Prognose, Tagesbilanz), **Wartung** (Termine mit Erinnerung), **Warnungen** (Grenzwerte einstellen), **Handy** (QR-Code, Fernzugang) |
 | **System** | **alle Werte**, die der Cerbo liefert, nach Gerät sortiert und durchsuchbar; Helligkeit, Nachtmodus, GPS |
 
 Alles, was etwas schaltet, startet nur nach **gedrückt halten**. Oben in der Kopfzeile erscheinen Alarme und Warnungen aller Geräte.
@@ -157,6 +158,34 @@ Die Womo-Zentrale holt sich neue Versionen selbst aus dem GitHub-Projekt **womo-
 Auf der Seite **System → Updates** siehst du die Version und kannst mit „Jetzt nach Updates suchen“ sofort aktualisieren. Steht dort „Bitte einmal bash install.sh ausführen“, braucht das Update neue Pakete: Terminal öffnen, `cd ~/womo-zentrale` und `bash install.sh`.
 
 Automatik ausschalten: in `config.json` `"auto_update": false` setzen (dann nur noch per Taste).
+
+## Extras
+
+**Warnungen aufs Handy** (über die gleiche ntfy-App wie der Bewegungsalarm): Akku niedrig / fast leer, Frischwasser fast leer,
+Grau- und Toilettentank fast voll, Landstrom weg, Kühlschrank oder Gefrierfach zu warm, Frost in den nächsten 12 Stunden,
+Sturmböen in den nächsten 6 Stunden. Jede Warnung kommt einmal und erst wieder, wenn sie vorher weg war.
+Grenzwerte und An/Aus unter **Extras → Warnungen**. Aktive Warnungen stehen oben in der Kopfzeile und auf der Startseite.
+
+**Akku-Prognose**: rechnet mit dem Durchschnittsverbrauch der letzten 24 Stunden und der Solar-Vorhersage für die nächsten Tage.
+Akku-Kapazität und Solarleistung unter **Extras → Verlauf** einstellen; nach ein paar sonnigen Tagen lernt die Zentrale selbst,
+was die Module wirklich bringen. „Leer“ heißt: 10 % Restladung.
+
+**Abfahrts-Checkliste**: Punkte antippen zum Abhaken, eigene Punkte ergänzen. Mit GPS am Cerbo erkennt die Zentrale das
+Losfahren und meldet offene Punkte sofort (Bildschirm und Handy) – und ganz besonders ein noch eingestecktes Landstromkabel.
+2 Stunden nach der Ankunft werden die Haken zurückgesetzt.
+
+**Reisekarte**: mit GPS werden Strecke, Kilometer und Stellplätze (ab 1 Stunde Standzeit) automatisch aufgezeichnet.
+Ohne GPS kannst du Stellplätze mit „📍 Aktuellen Ort als Stellplatz eintragen“ selbst festhalten.
+
+**Wartung**: „Erledigt“ gedrückt halten → nächster Termin wird berechnet. Mit ‹ › verschieben. Erinnerung 30 Tage,
+7 Tage vorher und am Tag selbst.
+
+**Handy**: QR-Code scannen (Handy im gleichen WLAN) – die Zentrale läuft dann auch im Handy-Browser. Für unterwegs
+(von zu Hause aus) Tailscale einrichten, die Anleitung steht direkt auf der Seite.
+
+**Standort**: Reihenfolge GPS (Cerbo) → selbst gewählter Ort → WLAN-Ortung → Internet-Standort → Geldern.
+Die WLAN-Ortung schickt die Kennungen der umliegenden WLAN-Netze (keine Inhalte) an die offene Datenbank beacondb.net.
+Abschalten: in `config.json` bei `weather` den Wert `"auto_location": false` setzen.
 
 ## 9. Hilfe
 

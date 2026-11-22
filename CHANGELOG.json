@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.5.4",
+    "date": "2026-11-22",
+    "changes": [
+      "Wetter: Ort selbst festlegen („📍 Ort ändern“, z. B. Issum) oder automatisch – neu mit genauer WLAN-Ortung",
+      "Warnungen aufs Handy: Akku niedrig, Wasser leer, Grau-/Toilettentank voll, Landstrom weg, Kühlschrank/Gefrierfach zu warm",
+      "Frost- und Sturmwarnung aus der Wettervorhersage",
+      "Akku-Prognose „reicht noch …“ mit Solar-Vorhersage (Energie, Batterie, Startseite)",
+      "Neue Seite Extras: Abfahrts-Checkliste mit Warnung beim Losfahren",
+      "Extras: Reisekarte mit Strecke und Stellplätzen (Reisetagebuch)",
+      "Extras: Verlauf von Akku, Solar und Verbrauch plus Tagesbilanz",
+      "Extras: Wartungs-Erinnerungen (Gas, TÜV, Dichtigkeit, Öl …)",
+      "Extras: Zentrale aufs Handy (QR-Code) und Anleitung für den Fernzugang",
+      "Warnungen erscheinen oben in der Kopfzeile und auf der Startseite"
+    ]
+  },
+  {
     "version": "1.5.3",
     "date": "2026-11-22",
     "changes": [

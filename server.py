@@ -29,6 +29,8 @@ import aiohttp
 from aiohttp import web
 import paho.mqtt.client as mqtt
 
+import extras
+
 try:
     from bleak import BleakClient, BleakScanner
 except ImportError:  # Bluetooth ist optional
@@ -184,25 +186,97 @@ async def keepalive_loop():
 # Wetter (Open-Meteo)
 # ---------------------------------------------------------------------------
 IP_LOC = {"lat": None, "lon": None, "place": None, "at": 0}
+WIFI_LOC = {"lat": None, "lon": None, "acc": None, "at": 0, "n": 0}
+WX_WAKE = asyncio.Event()          # Wetter sofort neu laden (z. B. nach Ortswahl)
+SRC_TXT = {"gps": "GPS", "manuell": "fest gewählt", "wlan": "WLAN-Ortung", "internet": "Internet", "fest": "Standard-Ort"}
 
 
-def gps_position():
-    """Standort: 1. GPS vom Cerbo, 2. Internet-Standort (WLAN/Mobilfunk), 3. fester Ort aus config."""
+def gps_fix():
     for k, v in list(values.items()):
         if k.startswith("gps/") and k.endswith("/Position/Latitude") and v is not None:
             lon = values.get(k.replace("Latitude", "Longitude"))
-            if lon is not None:
-                return float(v), float(lon), "gps"
+            fix = values.get(k.replace("Position/Latitude", "Fix"))
+            if lon is not None and fix != 0:
+                return float(v), float(lon)
+    return None
+
+
+def gps_position():
+    """Standort-Reihenfolge: GPS vom Cerbo > selbst gewählter Ort > WLAN-Ortung > Internet > Standard-Ort."""
+    g = gps_fix()
+    if g:
+        return g[0], g[1], "gps"
+    m = CFG["weather"].get("manual") or {}
+    if m.get("lat") is not None:
+        return float(m["lat"]), float(m["lon"]), "manuell"
+    if WIFI_LOC["lat"] is not None and time.time() - WIFI_LOC["at"] < 3 * 3600:
+        return WIFI_LOC["lat"], WIFI_LOC["lon"], "wlan"
     if IP_LOC["lat"] is not None:
         return IP_LOC["lat"], IP_LOC["lon"], "internet"
     return CFG["weather"]["fallback_lat"], CFG["weather"]["fallback_lon"], "fest"
 
 
+def location_info():
+    lat, lon, src = gps_position()
+    return {"lat": lat, "lon": lon, "src": src, "src_txt": SRC_TXT.get(src, src), "place": state.get("weather_place"),
+            "acc": WIFI_LOC["acc"] if src == "wlan" else None, "manual": bool((CFG["weather"].get("manual") or {}).get("lat"))}
+
+
+def wifi_scan():
+    """Umliegende WLAN-Netze (BSSID + Signal) über NetworkManager lesen."""
+    if not shutil.which("nmcli"):
+        return []
+    try:
+        subprocess.run(["nmcli", "device", "wifi", "rescan"], capture_output=True, timeout=15)
+    except Exception:
+        pass
+    try:
+        out = subprocess.run(["nmcli", "-t", "-f", "BSSID,SIGNAL", "device", "wifi", "list"],
+                             capture_output=True, text=True, timeout=20).stdout
+    except Exception:
+        return []
+    aps = []
+    for line in out.splitlines():
+        line = line.replace("\\:", "-")
+        parts = line.rsplit(":", 1)
+        if len(parts) != 2:
+            continue
+        mac = parts[0].replace("-", ":").lower()
+        if not re.fullmatch(r"([0-9a-f]{2}:){5}[0-9a-f]{2}", mac):
+            continue
+        try:
+            sig = int(parts[1])
+        except ValueError:
+            continue
+        aps.append({"macAddress": mac, "signalStrength": int(sig / 2 - 100)})
+    return aps
+
+
 async def update_ip_location(s):
-    """Ungefähren Standort über die Internet-Verbindung bestimmen (alle 15 Minuten)."""
+    """Ungefähren Standort bestimmen (alle 15 Minuten): zuerst über WLAN-Netze in der Umgebung, sonst über die IP."""
     if not CFG["weather"].get("auto_location", True) or time.time() - IP_LOC["at"] < 900:
         return
     IP_LOC["at"] = time.time()
+    # 1. WLAN-Ortung (offene Datenbank beacondb.net – meist auf 20–100 m genau)
+    try:
+        aps = await asyncio.get_running_loop().run_in_executor(None, wifi_scan)
+        if len(aps) >= 2:
+            aps.sort(key=lambda a: -a["signalStrength"])
+            async with s.post("https://api.beacondb.net/v1/geolocate", json={"wifiAccessPoints": aps[:40]},
+                              timeout=aiohttp.ClientTimeout(total=15)) as r:
+                if r.status == 200:
+                    d = await r.json(content_type=None)
+                    loc = d.get("location") or {}
+                    if loc.get("lat") is not None:
+                        WIFI_LOC.update(lat=float(loc["lat"]), lon=float(loc["lng"]), acc=d.get("accuracy"),
+                                        at=time.time(), n=len(aps))
+                        log.info("Standort über WLAN (%d Netze): %.4f, %.4f ±%s m", len(aps), WIFI_LOC["lat"],
+                                 WIFI_LOC["lon"], WIFI_LOC["acc"])
+                else:
+                    log.info("WLAN-Ortung: keine Treffer (%d Netze, HTTP %s)", len(aps), r.status)
+    except Exception as e:
+        log.info("WLAN-Ortung nicht möglich: %s", e)
+    # 2. Standort der Internet-Verbindung
     sources = (
         ("http://ip-api.com/json/?lang=de&fields=status,lat,lon,city", lambda d: (d.get("lat"), d.get("lon"), d.get("city"))),
         ("https://ipapi.co/json/", lambda d: (d.get("latitude"), d.get("longitude"), d.get("city"))),
@@ -220,8 +294,55 @@ async def update_ip_location(s):
             log.info("Standort über %s nicht ermittelt: %s", url.split("/")[2], e)
 
 
+async def loc_search(q: str):
+    """Ortssuche für die manuelle Auswahl (OpenStreetMap)."""
+    q = (q or "").strip()[:80]
+    if len(q) < 2:
+        return []
+    try:
+        async with aiohttp.ClientSession(headers={"User-Agent": "Womo-Zentrale/1.0"}) as s:
+            async with s.get("https://nominatim.openstreetmap.org/search",
+                             params={"q": q, "format": "json", "limit": "6", "addressdetails": "1", "accept-language": "de"},
+                             timeout=aiohttp.ClientTimeout(total=15)) as r:
+                res = await r.json(content_type=None)
+    except Exception as e:
+        log.warning("Ortssuche: %s", e)
+        return None
+    out = []
+    for x in res:
+        a = x.get("address", {})
+        name = a.get("city") or a.get("town") or a.get("village") or a.get("municipality") or x.get("name") or q
+        detail = ", ".join(v for v in (a.get("county"), a.get("state"), a.get("country")) if v)
+        out.append({"name": name, "detail": detail, "lat": float(x["lat"]), "lon": float(x["lon"])})
+    return out
+
+
+def loc_set(lat, lon, name):
+    if lat is None:
+        CFG["weather"]["manual"] = None
+        log.info("Standort wieder automatisch")
+    else:
+        CFG["weather"]["manual"] = {"lat": round(float(lat), 5), "lon": round(float(lon), 5), "name": str(name)[:60]}
+        log.info("Standort fest gewählt: %s", name)
+    save_config()
+    WX_WAKE.set()
+
+
 def dist_km(a, b):
     return math.hypot((a[0] - b[0]) * 111, (a[1] - b[1]) * 111 * math.cos(math.radians(a[0])))
+
+
+async def reverse_place(s, lat, lon):
+    try:
+        url = (f"https://nominatim.openstreetmap.org/reverse?format=json&zoom=10"
+               f"&lat={lat:.4f}&lon={lon:.4f}&accept-language=de")
+        async with s.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
+            a = (await r.json(content_type=None)).get("address", {})
+            return (a.get("city") or a.get("town") or a.get("village")
+                    or a.get("municipality") or a.get("county"))
+    except Exception as e:
+        log.info("Ortsname nicht ermittelt: %s", e)
+        return None
 
 
 async def weather_loop():
@@ -230,43 +351,41 @@ async def weather_loop():
         while True:
             await update_ip_location(s)
             lat, lon, src = gps_position()
-            moved = last_pos is None or src != last_src or dist_km(last_pos, (lat, lon)) > 5
+            moved = last_pos is None or src != last_src or dist_km(last_pos, (lat, lon)) > 3
             if moved or time.time() - last_fetch > 900:
                 try:
                     url = ("https://api.open-meteo.com/v1/forecast"
                            f"?latitude={lat:.4f}&longitude={lon:.4f}"
                            "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,"
                            "wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation,is_day,pressure_msl"
-                           "&hourly=temperature_2m,precipitation_probability,weather_code,wind_gusts_10m"
+                           "&hourly=temperature_2m,precipitation_probability,weather_code,wind_gusts_10m,shortwave_radiation"
                            "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,"
-                           "precipitation_probability_max,wind_gusts_10m_max,sunrise,sunset,uv_index_max"
+                           "precipitation_probability_max,wind_gusts_10m_max,sunrise,sunset,uv_index_max,shortwave_radiation_sum"
                            "&timezone=auto&forecast_days=7&wind_speed_unit=kmh")
                     async with s.get(url, timeout=aiohttp.ClientTimeout(total=20)) as r:
                         state["weather"] = await r.json()
                         state["weather"]["fetched"] = time.time()
                         state["weather"]["loc_source"] = src
                     if moved:
-                        place = None
-                        if src == "fest":
-                            place = CFG["weather"].get("fallback_name") or "Standort"
+                        if src == "manuell":
+                            place = CFG["weather"]["manual"].get("name")
+                        elif src == "fest":
+                            place = CFG["weather"].get("fallback_name")
                         else:
-                            try:
-                                url = (f"https://nominatim.openstreetmap.org/reverse?format=json&zoom=10"
-                                       f"&lat={lat:.4f}&lon={lon:.4f}&accept-language=de")
-                                async with s.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
-                                    a = (await r.json()).get("address", {})
-                                    place = (a.get("city") or a.get("town") or a.get("village")
-                                             or a.get("municipality") or a.get("county"))
-                            except Exception as e:
-                                log.info("Ortsname nicht ermittelt: %s", e)
-                            place = place or (IP_LOC["place"] if src == "internet" else None) or "Standort"
-                        state["weather_place"] = place
-                        log.info("Wetter für %s (Quelle: %s)", place, src)
+                            place = await reverse_place(s, lat, lon)
+                            place = place or (IP_LOC["place"] if src == "internet" else None)
+                        state["weather_place"] = place or "Standort"
+                        log.info("Wetter für %s (Quelle: %s)", state["weather_place"], src)
+                    state["weather"]["loc"] = location_info()
                     last_pos, last_fetch, last_src = (lat, lon), time.time(), src
                     await broadcast({"type": "weather", "weather": state["weather"], "place": state["weather_place"]})
                 except Exception as e:
                     log.warning("Wetter nicht geladen: %s", e)
-            await asyncio.sleep(60)
+            WX_WAKE.clear()
+            try:
+                await asyncio.wait_for(WX_WAKE.wait(), 60)
+            except asyncio.TimeoutError:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -868,6 +987,7 @@ async def check_update(apply: bool):
         log.info("Update auf %s installiert – Neustart", remote[:7])
         await broadcast({"type": "update", "update": {**u, "status": "Update wird installiert ..."}})
         await asyncio.sleep(1.5)
+        extras.shutdown()
         os._exit(0)          # systemd (Restart=always) startet die neue Version
 
 
@@ -895,11 +1015,16 @@ async def rollback():
     log.info("Auf %s zurückgestuft – Neustart", target)
     await broadcast({"type": "update", "update": {**u, "status": f"Wechsle zu {target} ..."}})
     await asyncio.sleep(1.5)
+    extras.shutdown()
     os._exit(0)
 
 
 async def reboot_pi():
     """Pi neu starten (Rechte dafür richtet install.sh ein)."""
+    try:
+        extras.shutdown()
+    except Exception:
+        pass
     for cmd in (["sudo", "-n", "/usr/sbin/reboot"], ["sudo", "-n", "/sbin/reboot"], ["systemctl", "reboot"]):
         if not shutil.which(cmd[0]):
             continue
@@ -994,6 +1119,8 @@ async def ws_handler(request):
     await ws.send_str(json.dumps({"type": "changelog", "changelog": load_changelog()[:10]}))
     if state["level"]:
         await ws.send_str(json.dumps({"type": "level", "level": state["level"]}))
+    for msg in extras.snapshot_msgs():
+        await ws.send_str(json.dumps(msg))
     async for m in ws:
         if m.type != aiohttp.WSMsgType.TEXT:
             continue
@@ -1002,6 +1129,12 @@ async def ws_handler(request):
         except ValueError:
             continue
         t = cmd.get("type")
+        try:
+            if await extras.handle(cmd, ws):
+                continue
+        except Exception as e:
+            log.warning("Befehl %s fehlgeschlagen: %s", t, e)
+            continue
         if t == "write":
             cerbo_write(str(cmd.get("path", "")), cmd.get("value"))
         elif t == "shr" and cmd.get("cmd") in ("level", "retract"):
@@ -1042,6 +1175,14 @@ async def ws_handler(request):
             else:
                 res = await push("🚨 BEWEGUNGSALARM – Test", "Test: So meldet sich ein Bewegungsalarm vom Wohnmobil.", "urgent", detail=True)
             await ws.send_str(json.dumps({"type": "push_result", "ok": res[0], "msg": res[1], "topic": topic}))
+        elif t == "loc_search":
+            res = await loc_search(cmd.get("q", ""))
+            await ws.send_str(json.dumps({"type": "loc_results", "q": cmd.get("q", ""), "results": res,
+                                          "error": res is None}))
+        elif t == "loc_set":
+            loc_set(cmd.get("lat"), cmd.get("lon"), cmd.get("name", "Standort"))
+        elif t == "loc_auto":
+            loc_set(None, None, None)
         elif t == "ac_set":
             asyncio.create_task(gree_set(cmd))
         elif t == "level_cal":
@@ -1072,6 +1213,13 @@ async def on_startup(app):
     mq.loop_start()
     for coro in (keepalive_loop(), weather_loop(), delta_loop(), lithium_loop(), level_loop(), gree_loop(), update_loop()):
         asyncio.create_task(coro)
+    extras.setup(CFG=CFG, values=values, state=state, push=push, broadcast=broadcast, save_config=save_config,
+                 log=log, BASE=BASE, location=location_info, lock=lock)
+    extras.start()
+
+
+async def on_shutdown(app):
+    extras.shutdown()
 
 
 def main():
@@ -1080,6 +1228,7 @@ def main():
     app.router.add_get("/ws", ws_handler)
     app.router.add_static("/static", BASE / "static")
     app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
     web.run_app(app, host="0.0.0.0", port=int(CFG.get("web_port", 8080)))
 
 

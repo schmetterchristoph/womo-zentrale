@@ -8,3 +8,8 @@ __pycache__/
 *.pyc
 static/img/womo.webp
 .update_paused
+history.json
+checklist.json
+trip.json
+maintenance.json
+*.json.tmp
