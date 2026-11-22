@@ -6,3 +6,4 @@ config.json.tmp
 static/vendor/
 __pycache__/
 *.pyc
+static/img/womo.webp
