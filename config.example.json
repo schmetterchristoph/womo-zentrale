@@ -63,5 +63,7 @@
     "threshold_deg": 0.4,
     "repeat_min": 5
   },
-  "auto_update": true
+  "auto_update": true,
+  "fullscreen_pin": "1234",
+  "update_interval_min": 5
 }

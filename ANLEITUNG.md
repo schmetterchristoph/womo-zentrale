@@ -135,7 +135,7 @@ Erscheint zusätzlich die Raspberry-Tastatur (Squeekboard), diese ausschalten: *
 
 ## Vollbild ein/aus
 
-Auf der Startseite rechts unten **„⛶ Vollbild ein / aus“**, auf allen anderen Seiten das Symbol **⛶** oben rechts neben der Uhr. Damit wechselst du zwischen Vollbild und normalem Fenster – z. B. um an den Desktop, das Terminal oder die Einstellungen des Pi zu kommen. Nochmal tippen = wieder Vollbild.
+Auf der Startseite rechts unten **„⛶ Vollbild ein / aus“**, auf allen anderen Seiten das Symbol **⛶** oben rechts neben der Uhr. Damit wechselst du zwischen Vollbild und normalem Fenster. **Das Vollbild verlassen geht nur mit PIN** (ab Werk **1234**, ändern in `config.json` bei `"fullscreen_pin"`, danach `sudo systemctl restart womo-zentrale`) – z. B. um an den Desktop, das Terminal oder die Einstellungen des Pi zu kommen. Nochmal tippen = wieder Vollbild.
 
 **Aktualisieren einer bestehenden Installation:** neue ZIP woanders entpacken (z. B. „Downloads“), dann `server.py`, `install.sh` und `static/index.html` in den vorhandenen Ordner `~/womo-zentrale` kopieren (**nicht** `config.json`!) und im Terminal ausführen:
 ```
@@ -146,7 +146,7 @@ sudo reboot
 
 ## Automatische Updates (GitHub)
 
-Die Womo-Zentrale holt sich neue Versionen selbst aus dem GitHub-Projekt **womo-zentrale**. Sie schaut alle 30 Minuten nach; gibt es etwas Neues, wird es installiert, das Programm startet neu und die Anzeige lädt sich von selbst neu. **Deine Einstellungen bleiben dabei immer erhalten** (`config.json`, Wecker, Kalibrierung – diese Dateien liegen nur auf dem Pi und nie bei GitHub).
+Die Womo-Zentrale holt sich neue Versionen selbst aus dem GitHub-Projekt **womo-zentrale**. Sie schaut alle 5 Minuten nach (`update_interval_min` in config.json); gibt es etwas Neues, wird es installiert, das Programm startet neu und die Anzeige lädt sich von selbst neu. **Deine Einstellungen bleiben dabei immer erhalten** (`config.json`, Wecker, Kalibrierung – diese Dateien liegen nur auf dem Pi und nie bei GitHub).
 
 Auf der Seite **System → Updates** siehst du die Version und kannst mit „Jetzt nach Updates suchen“ sofort aktualisieren. Steht dort „Bitte einmal bash install.sh ausführen“, braucht das Update neue Pakete: Terminal öffnen, `cd ~/womo-zentrale` und `bash install.sh`.
 

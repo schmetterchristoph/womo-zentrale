@@ -643,7 +643,7 @@ async def toggle_fullscreen():
 
 # ---------------------------------------------------------------------------
 # Automatische Updates von GitHub
-# Der Ordner ist ein Git-Klon. Alle 30 Minuten wird nachgeschaut; gibt es eine
+# Der Ordner ist ein Git-Klon. Alle 5 Minuten (update_interval_min) wird nachgeschaut; gibt es eine
 # neue Version, werden die Programmdateien ersetzt (config.json bleibt) und das
 # Programm beendet sich – systemd startet es sofort mit der neuen Version neu.
 # ---------------------------------------------------------------------------
@@ -691,13 +691,13 @@ async def check_update(apply: bool):
 
 
 async def update_loop():
-    await asyncio.sleep(60)
+    await asyncio.sleep(30)
     while True:
         try:
             await check_update(apply=False)
         except Exception as e:
             log.warning("Update-Prüfung: %s", e)
-        await asyncio.sleep(1800)
+        await asyncio.sleep(max(60, int(CFG.get("update_interval_min", 5)) * 60))
 
 
 # ---------------------------------------------------------------------------
@@ -775,7 +775,12 @@ async def ws_handler(request):
         elif t == "update_check":
             asyncio.create_task(check_update(apply=bool(cmd.get("apply"))))
         elif t == "fullscreen":
-            await toggle_fullscreen()
+            # Vollbild einschalten geht immer, verlassen nur mit PIN
+            if cmd.get("enter") or str(cmd.get("pin", "")) == str(CFG.get("fullscreen_pin", "1234")):
+                await ws.send_str(json.dumps({"type": "pin_result", "ok": True}))
+                await toggle_fullscreen()
+            else:
+                await ws.send_str(json.dumps({"type": "pin_result", "ok": False}))
         elif t == "brightness":
             set_brightness(float(cmd.get("value", 80)))
         elif t == "bat_scan":
