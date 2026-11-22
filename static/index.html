@@ -16,8 +16,8 @@ html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:sys
 #dim{position:absolute;inset:0;background:#000;pointer-events:none;opacity:0;transition:opacity .4s}
 /* Navigation */
 nav{grid-row:1/3;background:#070b10;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:2px}
-nav button{width:76px;height:50px;border:0;border-radius:16px;background:transparent;color:#b4c2d2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;font-weight:600;letter-spacing:.2px;font-family:inherit;cursor:pointer;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
-nav button svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;shape-rendering:geometricPrecision;stroke-linecap:round;stroke-linejoin:round}
+nav button{width:76px;height:47px;border:0;border-radius:16px;background:transparent;color:#b4c2d2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;font-weight:600;letter-spacing:.2px;font-family:inherit;cursor:pointer;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+nav button svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:2;shape-rendering:geometricPrecision;stroke-linecap:round;stroke-linejoin:round}
 nav button.on{background:var(--panel2);color:var(--blue)}
 /* Kopfzeile */
 header{display:flex;align-items:center;gap:18px;padding:0 24px;border-bottom:1px solid var(--line)}
@@ -146,6 +146,27 @@ input[type=range]{width:100%;height:40px;accent-color:var(--blue)}
 .pinOk{background:var(--green);border-color:var(--green);color:#fff;font-size:22px}
 .verTag{font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:8px;padding:2px 8px}
 #sleepBox{position:absolute;inset:0;background:#000;z-index:80;display:none;cursor:none}
+/* Licht */
+.lgZ{font-size:13px;font-weight:700;fill:#6f93b3;letter-spacing:2px;font-family:"Rajdhani","Arial Narrow",system-ui,sans-serif}
+.lgBtn{position:absolute;width:156px;height:96px;border-radius:20px;border:1.5px solid rgba(127,232,255,.35);
+  background:linear-gradient(160deg,rgba(30,48,66,.92),rgba(12,22,33,.94));color:#d6e4f0;backdrop-filter:blur(6px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-family:inherit;cursor:pointer;padding:0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 6px 18px rgba(0,0,0,.5);transition:background .3s,box-shadow .3s,border-color .3s,transform .1s}
+.lgBtn.on{background:linear-gradient(160deg,#ffe08a 0%,#ffc23d 55%,#ffa51f 100%);border-color:#fff0bf;color:#3b2900;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 0 calc(70px * var(--glow)) rgba(255,190,60,var(--glow)),0 6px 18px rgba(0,0,0,.45)}
+.lgBtn.sel{outline:3px solid #3ba3ff;outline-offset:4px}
+.lgBtn.out{height:58px;flex-direction:row;gap:8px}.lgBtn.out svg{width:26px;height:26px}.lgBtn.out .lgN{font-size:16px}.lgBtn.out .lgS{display:none}
+.lgBtn:active{transform:scale(.96)}
+.lgN{font-size:19px;font-weight:700;line-height:1.1;letter-spacing:.2px}
+.lgS{font-size:13px;font-weight:600;opacity:.75}
+.lgScene{flex:1;height:84px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(160deg,#1b2a3a,#121c27);color:#e3edf6;
+  font-family:inherit;font-size:17px;font-weight:650;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0}
+.lgScene span{font-size:26px;line-height:1}
+.lgScene:active{background:var(--blue);border-color:var(--blue)}
+.lgScene.off{background:linear-gradient(160deg,#5a1d26,#3a1219);border-color:#8a2a38;color:#ffd5da}
+.lgScene.cfg{flex:none;width:96px;font-size:14px;color:var(--mute)}
+#lgRange{accent-color:#ffc233}
+#lgSetup{position:absolute;inset:0;background:rgba(3,10,18,.9);display:none;align-items:center;justify-content:center;z-index:44}
 /* Extras-Seite */
 .tabs{display:flex;gap:8px;margin-bottom:14px}
 .tab{height:46px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:#b4c2d2;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px}
@@ -280,7 +301,7 @@ function connect(){
   ws.onopen = () => { opened = true; };
   ws.onmessage = ev => {
     const m = JSON.parse(ev.data);
-    if (exMessage(m)) {}
+    if (exMessage(m) || lgMessage(m)) {}
     else if (m.type === "snapshot") { for (const k in V) delete V[k]; Object.assign(V, m.values); }
     else if (m.type === "delta") Object.assign(V, m.values);
     else if (m.type === "status") {
@@ -335,7 +356,7 @@ document.addEventListener("click", e => {
 });
 function runAction(a){
   const [cmd, ...p] = a.split("|");
-  if (exAction(cmd, p)) { schedule(); return; }
+  if (exAction(cmd, p) || lgAction(cmd, p)) { schedule(); return; }
   if (cmd === "w") write(p[0], Number(p[1]));
   else if (cmd === "shr") send({type:"shr", cmd:p[0]});
   else if (cmd === "limit") limitStep(Number(p[0]), p[1]);
@@ -386,6 +407,7 @@ const IC = {
   level:'<rect x="2" y="8" width="20" height="8" rx="4"/><circle cx="12" cy="12" r="2"/><path d="M8 8v8M16 8v8"/>',
   radio:'<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8l10-5"/><circle cx="15" cy="14" r="3"/><path d="M6 12h3M6 15h3"/>',
   wx:'<circle cx="8" cy="9" r="3.5"/><path d="M8 2v1.5M2 9h1.5M3.8 4.8l1 1M12.2 4.8l-1 1"/><path d="M9 19h9a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.5A3 3 0 0 0 9 19z"/>',
+  bulb:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V17h5v-1.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>',
   extra:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2.2 4.8-4.8 2.2 2.2-4.8z"/>',
   sys:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
 };
@@ -416,6 +438,7 @@ const WDAY = ["So","Mo","Di","Mi","Do","Fr","Sa"];
 // ===========================================================================
 const PAGES = [
   {id:"start",  t:"Start",    ic:"home"},
+  {id:"licht",  t:"Licht",    ic:"bulb"},
   {id:"energy", t:"Energie",  ic:"energy"},
   {id:"batt",   t:"Batterie", ic:"batt"},
   {id:"ac",     t:"Landstrom",ic:"plug"},
@@ -1716,11 +1739,11 @@ function buildImgStart(){
     </g>
     <text x="972" y="150" class="hudS" id="hWxWarn" fill="#ff8a3d"></text>
     <!-- Schnelltasten -->
-    ${[["level", "NIVEAU", "iBtnLevel"], ["klima", "KLIMA", "iBtnKlima"], ["radio", "RADIO", "iBtnRadio"], ["clock", "UHR · WECKER", "iBtnClock"], ["energy", "ENERGIE", "iBtnEnergy"]].map(([pg, t, id], i) =>
-      `<g class="hud hbtn" transform="translate(972,${162 + i * 78})" data-tap="page|${pg}">
-        <path d="${hudFrame(196, 66)}" class="hudFrame hudStrong"/>
-        <text x="98" y="31" text-anchor="middle" class="hBtnT">${t}</text>
-        <text x="98" y="52" text-anchor="middle" class="hudS" id="${id}"></text></g>`).join("")}
+    ${[["licht", "LICHT", "iBtnLicht"], ["level", "NIVEAU", "iBtnLevel"], ["klima", "KLIMA", "iBtnKlima"], ["radio", "RADIO", "iBtnRadio"], ["clock", "UHR · WECKER", "iBtnClock"], ["energy", "ENERGIE", "iBtnEnergy"]].map(([pg, t, id], i) =>
+      `<g class="hud hbtn" transform="translate(972,${160 + i * 64})" data-tap="page|${pg}">
+        <path d="${hudFrame(196, 56)}" class="hudFrame hudStrong"/>
+        <text x="98" y="25" text-anchor="middle" class="hBtnT">${t}</text>
+        <text x="98" y="45" text-anchor="middle" class="hudS" id="${id}"></text></g>`).join("")}
     <g class="hud hbtn" transform="translate(972,552)" data-tap="fs"><path d="${hudFrame(196, 34, 8)}" class="hudFrame"/>
       <text x="98" y="23" text-anchor="middle" class="hChip" style="font-size:14px">⛶ VOLLBILD EIN / AUS</text></g>
     <!-- Uhr -->
@@ -1797,6 +1820,7 @@ function updImgStart(){
   txt("iBtnKlima", AC && AC.ok ? (AC.power ? `${({cool: "Kühlen", heat: "Heizen", dry: "Entf.", fan: "Lüften", auto: "Auto"})[AC.mode] || ""} ${fp(AC.target, 0, "°C")}` : "aus") : "");
   txt("iBtnRadio", RADIO.playing && !RADIO.audio.paused ? RADIO.playing.name.slice(0, 22) : "");
   txt("iBtnClock", ALARMS.some(a => a.on) ? "⏰ " + ALARMS.filter(a => a.on).map(a => `${pad(a.h)}:${pad(a.m)}`)[0] : "");
+  { const on = LG ? LG.lights.filter(l => l.on).length : 0; txt("iBtnLicht", LG ? (on ? `💡 ${on} an` : "alle aus") : ""); }
   txt("iBtnEnergy", FC && FC.text ? (FC.shore ? "Landstrom · lädt" : FC.text.replace("reicht noch ca. ", "Akku reicht ≈ ")) : "");
   const wg = document.getElementById("hWarnG");
   if (wg) { wg.style.display = WARNS.length ? "" : "none";
@@ -2430,7 +2454,233 @@ function demoExtrasCmd(m){
   return true;
 }
 
-const RENDER = {start:updStart, energy:updEnergy, batt:updBatt, ac:updAc, tanks:updTanks, sw:updSw, level:updLevel, klima:updKlima, clock:updClock, radio:updRadio, wx:updWx, sys:updSys, extras:updExtras};
+// ===========================================================================
+// Licht (Shelly) – Grundriss mit großen Schaltern
+// ===========================================================================
+let LG = null, LG_SEL = null, LG_SCAN = {busy: false, found: [], searched: false};
+const LG_EDIT = {open: false, id: null};
+const LG_ZPOS = {alkoven: [150, 170], decke: [470, 170], sitz: [400, 335], eingang: [660, 160], kueche: [660, 335],
+  bad: [850, 160], ambiente: [850, 335], heck: [1022, 250], garage: [1022, 380], aussen: [660, 34]};
+const BW = 156, BH = 96;
+let lgSliding = false;
+
+function lgMessage(m){
+  if (m.type === "lights") { LG = m; if (LG_SEL && !LG.lights.some(l => l.id === LG_SEL)) LG_SEL = null; }
+  else if (m.type === "shelly_scan") { LG_SCAN = {busy: m.busy, found: m.found || [], searched: m.searched || LG_SCAN.searched}; }
+  else return false;
+  if (LG_EDIT.open) lgEditDraw();
+  return true;
+}
+function lgLight(id){ return LG && LG.lights.find(l => l.id === id); }
+
+function lgAction(cmd, p){
+  if (cmd === "lg") {
+    const l = lgLight(p[0]); if (!l) return true;
+    LG_SEL = l.dim ? l.id : LG_SEL;
+    l.on = !l.on;                       // sofort zeigen, Server bestätigt
+    send({type: "light_set", id: l.id, on: l.on});
+    return true;
+  }
+  if (cmd === "lgsel") { LG_SEL = p[0]; return true; }
+  if (cmd === "lgscene") { send({type: "light_scene", scene: p[0]}); return true; }
+  if (cmd === "lgstep") { const l = lgLight(LG_SEL); if (l) { l.bri = Math.max(1, Math.min(100, (l.bri || 100) + Number(p[0]))); l.on = true; send({type: "light_set", id: l.id, on: true, bri: l.bri}); } return true; }
+  if (cmd === "lgedit") { LG_EDIT.open = p[0] !== "close"; if (LG_EDIT.open && !LG_EDIT.id && LG) LG_EDIT.id = LG.lights[0] && LG.lights[0].id; if (!LG_EDIT.open) oskHide(); lgEditDraw(); return true; }
+  if (cmd === "lgpick") { LG_EDIT.id = p[0]; lgEditDraw(true); return true; }
+  if (cmd === "lgzone") { send({type: "light_edit", id: LG_EDIT.id, zone: p[0]}); return true; }
+  if (cmd === "lgdim") { const l = lgLight(LG_EDIT.id); if (l) send({type: "light_edit", id: l.id, dim: !l.dim}); return true; }
+  if (cmd === "lgassign") {
+    if (p[0] === "none") send({type: "light_edit", id: LG_EDIT.id, host: "", ch: 0, kind: "auto"});
+    else send({type: "light_edit", id: LG_EDIT.id, host: p[0], ch: Number(p[1]), kind: p[2], dim: p[2] !== "switch"});
+    return true;
+  }
+  if (cmd === "lgscan") { LG_SCAN.busy = true; send({type: "shelly_scan"}); lgEditDraw(); return true; }
+  if (cmd === "lgadd") { send({type: "light_add", name: "Neues Licht", zone: "decke"}); return true; }
+  if (cmd === "lgdel") { send({type: "light_del", id: LG_EDIT.id}); LG_EDIT.id = null; return true; }
+  return false;
+}
+
+function bulb(on){ return `<svg viewBox="0 0 24 24" width="34" height="34" fill="${on ? "#fff3c4" : "none"}" stroke="${on ? "#3a2a00" : "#8697ab"}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V17h5v-1.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>`; }
+
+function lgPlan(){
+  // Draufsicht Alkoven-Womo (Fahrerhaus links), im Stil der Startseite
+  const st = 'fill="#0f1d2b" stroke="#3a5a78" stroke-width="1.6"';
+  return `<svg viewBox="0 0 1144 470" width="1144" height="470" style="position:absolute;left:0;top:0">
+    <defs>
+      <linearGradient id="lgFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0e1b28"/><stop offset="1" stop-color="#09121b"/></linearGradient>
+      <radialGradient id="lgWarm"><stop offset="0" stop-color="#ffd36b" stop-opacity=".85"/><stop offset=".35" stop-color="#ffb627" stop-opacity=".38"/><stop offset="1" stop-color="#ff9a1f" stop-opacity="0"/></radialGradient>
+      <pattern id="lgGrid" width="22" height="22" patternUnits="userSpaceOnUse"><path d="M22 0H0V22" fill="none" stroke="#38e8ff" stroke-opacity=".05"/></pattern>
+      <filter id="lgNeon" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <clipPath id="lgBody"><path d="M70 70 H1100 Q1120 70 1120 90 V420 Q1120 440 1100 440 H120 Q70 440 50 400 L28 330 Q20 255 28 180 L50 110 Q70 70 120 70 Z"/></clipPath>
+    </defs>
+    <!-- Karosserie -->
+    <path d="M70 70 H1100 Q1120 70 1120 90 V420 Q1120 440 1100 440 H120 Q70 440 50 400 L28 330 Q20 255 28 180 L50 110 Q70 70 120 70 Z" fill="url(#lgFloor)"/>
+    <g clip-path="url(#lgBody)"><rect width="1144" height="470" fill="url(#lgGrid)"/><g id="lgGlow"></g></g>
+    <!-- Fahrerhaus -->
+    <path d="M58 108 L38 182 Q31 255 38 328 L58 402" fill="none" stroke="#7fe8ff" stroke-opacity=".45" stroke-width="7" stroke-linecap="round"/>
+    <rect x="80" y="118" width="70" height="62" rx="14" ${st}/><rect x="80" y="330" width="70" height="62" rx="14" ${st}/>
+    <circle cx="70" cy="361" r="20" fill="none" stroke="#3a5a78" stroke-width="3"/>
+    <rect x="44" y="84" width="236" height="342" rx="28" fill="none" stroke="#5fe9ff" stroke-opacity=".28" stroke-dasharray="9 7"/>
+    <rect x="160" y="96" width="112" height="318" rx="12" fill="#0f1d2b" fill-opacity=".55" stroke="#3a5a78" stroke-dasharray="4 5"/>
+    <text x="170" y="434" class="lgZ" text-anchor="start">ALKOVEN</text>
+    <line x1="292" y1="72" x2="292" y2="438" stroke="#3a5a78" stroke-width="2"/>
+    <!-- Sitzgruppe -->
+    <rect x="304" y="262" width="62" height="168" rx="12" ${st}/><rect x="378" y="300" width="112" height="86" rx="10" fill="#132638" stroke="#4a6d8e" stroke-width="1.6"/>
+    <rect x="502" y="262" width="48" height="168" rx="12" ${st}/><text x="306" y="254" class="lgZ">SITZGRUPPE</text>
+    <!-- Eingang -->
+    <rect x="596" y="64" width="118" height="12" rx="4" fill="#3fd2e0" opacity=".7" filter="url(#lgNeon)"/><text x="618" y="98" class="lgZ">EINGANG</text>
+    <!-- Küche -->
+    <rect x="574" y="304" width="190" height="126" rx="10" ${st}/>
+    <circle cx="616" cy="366" r="17" fill="none" stroke="#4a6d8e" stroke-width="2"/><circle cx="664" cy="366" r="17" fill="none" stroke="#4a6d8e" stroke-width="2"/>
+    <rect x="700" y="344" width="46" height="42" rx="8" fill="none" stroke="#4a6d8e" stroke-width="2"/><text x="578" y="296" class="lgZ">KÜCHE</text>
+    <!-- Bad -->
+    <path d="M776 72 V252 H922 V72" fill="#0d1925" stroke="#3a5a78" stroke-width="2"/>
+    <circle cx="890" cy="108" r="16" fill="none" stroke="#4a6d8e" stroke-width="2"/><rect x="792" y="196" width="40" height="40" rx="8" fill="none" stroke="#4a6d8e" stroke-width="2"/>
+    <text x="788" y="240" class="lgZ">BAD</text>
+    <!-- Heck -->
+    <line x1="922" y1="72" x2="922" y2="438" stroke="#3a5a78" stroke-width="2"/>
+    <rect x="944" y="96" width="158" height="322" rx="16" ${st}/><rect x="958" y="110" width="130" height="44" rx="10" fill="#152a3d"/>
+    <text x="950" y="434" class="lgZ">HECKBETT</text>
+    <!-- Außen -->
+    <path d="M560 34 H760" stroke="#ffc233" stroke-opacity=".35" stroke-width="2" stroke-dasharray="6 6"/>
+    <!-- Umriss mit Leuchtkante -->
+    <path d="M70 70 H1100 Q1120 70 1120 90 V420 Q1120 440 1100 440 H120 Q70 440 50 400 L28 330 Q20 255 28 180 L50 110 Q70 70 120 70 Z" fill="none" stroke="#38e8ff" stroke-width="2.2" stroke-opacity=".85" filter="url(#lgNeon)"/>
+    <circle cx="160" cy="62" r="9" fill="#0a131c" stroke="#3a5a78"/><circle cx="160" cy="448" r="9" fill="#0a131c" stroke="#3a5a78"/>
+    <circle cx="880" cy="62" r="9" fill="#0a131c" stroke="#3a5a78"/><circle cx="880" cy="448" r="9" fill="#0a131c" stroke="#3a5a78"/>
+  </svg>`;
+}
+
+function updLicht(){
+  const pg = document.getElementById("pg-licht");
+  if (!document.getElementById("lgBtns")) {
+    pg.innerHTML = `<div style="position:absolute;left:22px;top:12px;width:1144px;height:470px">${lgPlan()}<div id="lgBtns"></div></div>
+      <div style="position:absolute;left:22px;right:22px;bottom:14px;height:120px;display:flex;gap:14px">
+        <div class="card" style="flex:1;display:flex;align-items:center;gap:10px;padding:12px 14px" id="lgScenes"></div>
+        <div class="card" style="width:430px;padding:12px 16px" id="lgDim">
+          <div class="row" style="justify-content:space-between"><b id="lgDimName" style="font-size:17px">Helligkeit</b><span class="mid" id="lgDimVal" style="font-size:22px">--</span></div>
+          <div class="row" style="gap:10px;margin-top:6px"><button class="btn sm" data-tap="lgstep|-10" style="width:56px;font-size:24px">−</button>
+            <input type="range" id="lgRange" min="1" max="100" value="50" style="flex:1;height:44px">
+            <button class="btn sm" data-tap="lgstep|10" style="width:56px;font-size:24px">+</button></div></div>
+      </div>`;
+    const r = document.getElementById("lgRange");
+    r.addEventListener("pointerdown", () => { lgSliding = true; });
+    r.addEventListener("input", () => { const l = lgLight(LG_SEL); if (l) { l.bri = Number(r.value); l.on = true; txt("lgDimVal", l.bri + " %"); lgBtnsDraw(); } });
+    r.addEventListener("change", () => { lgSliding = false; const l = lgLight(LG_SEL); if (l) send({type: "light_set", id: l.id, on: true, bri: Number(r.value)}); });
+    if (!LG) send({type: "light_get"});
+  }
+  lgBtnsDraw();
+  const sc = LG ? LG.scenes : [];
+  html("lgScenes", sc.map(s => `<button class="lgScene ${s.id === "aus" ? "off" : ""}" data-tap="lgscene|${s.id}"><span>${LG_SCENE_IC[s.id] || "✦"}</span>${esc(s.name)}</button>`).join("") +
+    `<button class="lgScene cfg" data-tap="lgedit|open"><span>⚙</span>Einrichten</button>`);
+  const l = lgLight(LG_SEL);
+  txt("lgDimName", l ? l.name + " · Helligkeit" : "Lampe antippen zum Dimmen");
+  txt("lgDimVal", l ? (l.on ? (l.bri ?? 100) + " %" : "aus") : "");
+  const r = document.getElementById("lgRange");
+  r.disabled = !l;
+  if (l && !lgSliding && Number(r.value) !== (l.bri ?? 100)) r.value = l.bri ?? 100;
+}
+
+const LG_SCENE_IC = {aus: "⏻", hell: "☀️", abend: "🌅", nacht: "🌙", ankommen: "🏠"};
+function lgGlowDraw(){
+  if (!LG) return;
+  const used = {};
+  html("lgGlow", LG.lights.map(l => {
+    const [cx, cy] = LG_ZPOS[l.zone] || [570, 240];
+    const k = used[l.zone] = (used[l.zone] ?? -1) + 1;
+    if (!l.on || l.zone === "aussen") return "";
+    const x = cx + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (BW + 10);
+    const a = l.dim ? Math.max(.15, (l.bri ?? 100) / 100) : 1;
+    return `<circle cx="${x}" cy="${cy}" r="${150 + 60 * a}" fill="url(#lgWarm)" opacity="${a.toFixed(2)}"/>`;
+  }).join(""));
+}
+function lgBtnsDraw(){
+  lgGlowDraw();
+  if (!LG) { html("lgBtns", `<div class="empty" style="position:absolute;left:400px;top:200px">Lade Lichter ...</div>`); return; }
+  const used = {};
+  html("lgBtns", LG.lights.map(l => {
+    const [cx, cy] = LG_ZPOS[l.zone] || [570, 240];
+    const k = used[l.zone] = (used[l.zone] ?? -1) + 1;
+    const out = l.zone === "aussen", h = out ? 58 : BH;
+    const x = Math.round(cx - BW / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (BW + 10)), y = Math.round(cy - h / 2);
+    const on = l.on, sel = l.id === LG_SEL;
+    const st = !on ? "AUS" : l.dim ? `${l.bri ?? 100} %` : "AN";
+    return `<button class="lgBtn ${on ? "on" : ""} ${sel ? "sel" : ""} ${out ? "out" : ""}" style="left:${Math.max(0, Math.min(1144 - BW, x))}px;top:${Math.max(0, y)}px;--glow:${on ? (0.25 + 0.5 * (l.dim ? (l.bri ?? 100) / 100 : 1)).toFixed(2) : 0}" data-tap="lg|${l.id}">
+      ${bulb(on)}<span class="lgN">${esc(l.name)}</span><span class="lgS">${st}${l.virtual ? " · ohne Shelly" : !l.ok ? " · ⚠" : ""}</span></button>`;
+  }).join(""));
+}
+
+// ---------------------------------------------------------- Einrichten ----
+function lgEditDraw(newSel){
+  let el = document.getElementById("lgSetup");
+  if (!el) {
+    document.getElementById("stage").insertAdjacentHTML("beforeend", `<div id="lgSetup"><div class="card" style="width:1180px;height:670px;display:flex;flex-direction:column">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">Licht einrichten</h3>
+        <div class="row" style="gap:8px"><button class="btn sm" data-tap="lgadd">+ Licht hinzufügen</button><button class="btn sm sel" data-tap="lgedit|close">Fertig</button></div></div>
+      <div class="grid" style="grid-template-columns:330px 1fr;flex:1;min-height:0;margin-top:12px">
+        <div class="scroll" data-keep="lgl" style="min-height:0"><div id="lgList"></div></div>
+        <div style="display:flex;flex-direction:column;min-height:0;gap:10px">
+          <div class="row" style="gap:10px"><input type="text" id="lgName" placeholder="Name der Lampe"><button class="btn sm" id="lgNameOk" style="height:46px">Übernehmen</button></div>
+          <div><div class="hint" style="margin-bottom:6px">Wo im Womo? (bestimmt den Platz im Grundriss)</div><div class="row" id="lgZones" style="flex-wrap:wrap;gap:6px"></div></div>
+          <div class="row" id="lgOpts" style="gap:8px"></div>
+          <div class="row" style="justify-content:space-between;margin-top:4px"><b style="font-size:16px">Shelly zuordnen</b><button class="btn sm sel" data-tap="lgscan" id="lgScanBtn">Shellys im WLAN suchen</button></div>
+          <div class="scroll" data-keep="lgs" style="flex:1;min-height:0"><div id="lgShellys"></div></div>
+        </div></div></div></div>`);
+    el = document.getElementById("lgSetup");
+    const ok = () => { const v = document.getElementById("lgName").value.trim(); if (v && LG_EDIT.id) send({type: "light_edit", id: LG_EDIT.id, name: v}); oskHide(); document.getElementById("lgName").blur(); };
+    document.getElementById("lgNameOk").addEventListener("click", ok);
+    document.getElementById("lgName").addEventListener("keydown", e => { if (e.key === "Enter") ok(); });
+    newSel = true;
+  }
+  el.style.display = LG_EDIT.open ? "flex" : "none";
+  if (!LG_EDIT.open || !LG) return;
+  if (!lgLight(LG_EDIT.id)) { LG_EDIT.id = LG.lights[0] && LG.lights[0].id; newSel = true; }
+  const cur = lgLight(LG_EDIT.id);
+  html("lgList", LG.lights.map(l => `<div class="chkRow ${l.id === LG_EDIT.id ? "done" : ""}" style="height:auto;padding:10px 14px;display:block" data-tap="lgpick|${l.id}">
+      <div style="font-weight:650">${esc(l.name)}</div><div class="hint">${esc(LG.zones[l.zone] || l.zone)} · ${l.host ? esc(l.host) + " · Kanal " + (l.ch + 1) : "kein Shelly"}${l.dim ? " · dimmbar" : ""}</div></div>`).join(""));
+  if (!cur) return;
+  if (newSel) document.getElementById("lgName").value = cur.name;
+  html("lgZones", Object.entries(LG.zones).map(([z, t]) => `<button class="btn sm ${cur.zone === z ? "sel" : ""}" data-tap="lgzone|${z}">${esc(t)}</button>`).join(""));
+  html("lgOpts", `<button class="btn sm ${cur.dim ? "sel" : ""}" data-tap="lgdim">${cur.dim ? "✓ dimmbar" : "nur an/aus"}</button>
+    ${holdBtn("Lampe löschen", "lgdel", "sm")}<span class="hint">${cur.host ? `Verbunden mit ${esc(cur.host)}, Kanal ${cur.ch + 1}${cur.ok ? " ✓" : " – nicht erreichbar"}` : "Noch kein Shelly – schaltet nur auf dem Bildschirm."}</span>`);
+  document.getElementById("lgScanBtn").textContent = LG_SCAN.busy ? "Suche läuft ..." : "Shellys im WLAN suchen";
+  const rows = [];
+  for (const d of LG_SCAN.found) for (const c of d.chans) {
+    const mine = cur.host === d.host && cur.ch === c.ch;
+    const other = LG.lights.find(l => l.id !== cur.id && l.host === d.host && l.ch === c.ch);
+    rows.push(`<button class="btn locRes ${mine ? "sel" : ""}" data-tap="lgassign|${d.host}|${c.ch}|${c.kind}">
+      <b>${esc(d.name || d.model)}</b> · Kanal ${c.ch + 1} (${c.kind === "switch" ? "Schalter" : c.kind === "light" ? "Dimmer" : "Farbe"})
+      <span class="mute" style="font-size:13px">${esc(d.host)} · ${esc(d.model)}${other ? " · belegt: " + esc(other.name) : ""}${c.on ? " · gerade an" : ""}</span></button>`);
+  }
+  html("lgShellys", (cur.host ? `<button class="btn locRes" data-tap="lgassign|none">Zuordnung entfernen (nur Bildschirm)</button>` : "") +
+    (rows.length ? rows.join("") : `<div class="hint" style="padding:10px">${LG_SCAN.busy ? "Suche im WLAN – dauert ca. 20 Sekunden ..." : LG_SCAN.searched ? "Keine Shellys gefunden. Sind sie im gleichen WLAN wie der Pi?" : "Tippe auf „Shellys im WLAN suchen“. Tipp: Kanal antippen, die Lampe muss dann im Womo kurz reagieren, wenn du sie im Grundriss schaltest."}</div>`));
+}
+
+function demoLightsData(){
+  const L = [["Alkoven", "alkoven", true, 1, 30], ["Sitzgruppe", "sitz", true, 1, 60], ["Deckenlicht", "decke", true, 0, 100], ["Küche", "kueche", true, 1, 80],
+    ["Bad", "bad", true, 0, 100], ["Heckbett", "heck", true, 0, 100], ["Ambiente", "ambiente", true, 1, 35], ["Einstieg", "eingang", true, 0, 100], ["Vorzelt", "aussen", false, 0, null]];
+  LG = {lights: L.map(([name, zone, dim, on, bri], i) => ({id: "L" + i, name, zone, dim, on: !!on, bri, host: "", ch: 0, ok: false, virtual: true})),
+    zones: {alkoven: "Alkoven", sitz: "Sitzgruppe", kueche: "Küche", bad: "Bad", heck: "Heckbett", eingang: "Eingang", decke: "Wohnraum", ambiente: "Ambiente", aussen: "Außen / Vorzelt", garage: "Heckgarage"},
+    scenes: [{id: "aus", name: "Alles aus"}, {id: "hell", name: "Hell"}, {id: "abend", name: "Abend"}, {id: "nacht", name: "Nacht"}, {id: "ankommen", name: "Ankommen"}]};
+}
+function demoLightsCmd(m){
+  const t = m.type || "";
+  if (!t.startsWith("light") && t !== "shelly_scan") return false;
+  const l = LG.lights.find(x => x.id === m.id);
+  if (t === "light_set" && l) { if (m.on != null) l.on = m.on; if (m.bri != null) l.bri = m.bri; }
+  else if (t === "light_scene") { const S = {aus: {"*": 0}, hell: {"*": 100}, abend: {"*": 0, sitz: 45, ambiente: 35, kueche: 30}, nacht: {"*": 0, bad: 8, eingang: 5}, ankommen: {eingang: 100, decke: 80, aussen: 100, ambiente: 50}}[m.scene];
+    for (const x of LG.lights) { const v = x.zone in S ? S[x.zone] : S["*"]; if (v == null || (m.scene === "hell" && x.zone === "aussen")) continue; x.on = v > 0; if (v > 0 && x.dim) x.bri = v; } }
+  else if (t === "light_edit" && l) { for (const k of ["name", "zone", "host", "ch", "dim"]) if (k in m) l[k] = m[k]; l.virtual = !l.host; }
+  else if (t === "light_add") LG.lights.push({id: "N" + Date.now(), name: m.name, zone: m.zone, dim: true, on: false, bri: 100, host: "", ch: 0, virtual: true});
+  else if (t === "light_del") LG.lights = LG.lights.filter(x => x.id !== m.id);
+  else if (t === "shelly_scan") setTimeout(() => { lgMessage({type: "shelly_scan", busy: false, searched: true, found: [
+    {host: "192.168.8.51", gen: 2, model: "SNDC-0D4P10WW", name: "Licht vorne", chans: [0, 1, 2, 3].map(c => ({ch: c, kind: "light", on: false}))},
+    {host: "192.168.8.52", gen: 2, model: "SNDC-0D4P10WW", name: "Licht hinten", chans: [0, 1, 2, 3].map(c => ({ch: c, kind: "light", on: false}))},
+    {host: "192.168.8.53", gen: 2, model: "SNSW-001X16EU", name: "Vorzelt", chans: [{ch: 0, kind: "switch", on: false}]}]}); schedule(); }, 1500);
+  if (LG_EDIT.open) lgEditDraw();
+  return true;
+}
+
+const RENDER = {start:updStart, energy:updEnergy, batt:updBatt, ac:updAc, tanks:updTanks, sw:updSw, level:updLevel, klima:updKlima, clock:updClock, radio:updRadio, wx:updWx, sys:updSys, extras:updExtras, licht:updLicht};
 let queued = false, lastPaint = 0;
 function schedule(force){
   if (queued) return;
@@ -2528,6 +2778,7 @@ function startDemo(){
   }, 2000);
   demoExtras();
   demoExtrasData();
+  demoLightsData();
   schedule(true);
 }
 function demoExtras(){
@@ -2543,7 +2794,7 @@ function demoExtras(){
   setInterval(() => { LEVEL.roll = Math.round((LEVEL.roll + (Math.random() - .5) * .1) * 100) / 100; if (cur === "level") schedule(); }, 1000);
 }
 function demoCommand(m){
-  if (demoExtrasCmd(m)) return;
+  if (demoExtrasCmd(m) || demoLightsCmd(m)) return;
   if (m.type === "ac_set") { for (const k in m) if (k !== "type") AC[k] = m[k]; return; }
   if (m.type === "guard") { GUARD.armed = m.armed; GUARD.triggered = false; return; }
   if (m.type === "bat_scan") { setTimeout(() => { BATSCAN.busy = false; BATSCAN.searched = true; BATSCAN.found = [

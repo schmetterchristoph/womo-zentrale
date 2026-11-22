@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.5.5",
+    "date": "2026-11-22",
+    "changes": [
+      "Neue Seite Licht: Womo-Grundriss mit großen Lichtschaltern – eingeschaltete Lampen leuchten im Grundriss warm auf",
+      "Dimmen per Schieberegler, Szenen: Alles aus, Hell, Abend, Nacht, Ankommen",
+      "Shelly-Steuerung direkt im WLAN (Plus/Pro/Gen3 und Gen1, z. B. Plus RGBW PM, Plus 1) – Shellys werden automatisch gesucht",
+      "Licht einrichten: Lampen umbenennen, Platz im Womo wählen, Shelly-Kanal zuordnen, Lampen hinzufügen/löschen",
+      "Startseite: neue Schnelltaste LICHT"
+    ]
+  },
+  {
     "version": "1.5.4",
     "date": "2026-11-22",
     "changes": [

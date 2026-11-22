@@ -30,6 +30,7 @@ from aiohttp import web
 import paho.mqtt.client as mqtt
 
 import extras
+import lights
 
 try:
     from bleak import BleakClient, BleakScanner
@@ -1119,7 +1120,7 @@ async def ws_handler(request):
     await ws.send_str(json.dumps({"type": "changelog", "changelog": load_changelog()[:10]}))
     if state["level"]:
         await ws.send_str(json.dumps({"type": "level", "level": state["level"]}))
-    for msg in extras.snapshot_msgs():
+    for msg in [lights.lights_msg()] + extras.snapshot_msgs():
         await ws.send_str(json.dumps(msg))
     async for m in ws:
         if m.type != aiohttp.WSMsgType.TEXT:
@@ -1130,7 +1131,7 @@ async def ws_handler(request):
             continue
         t = cmd.get("type")
         try:
-            if await extras.handle(cmd, ws):
+            if await lights.handle(cmd, ws) or await extras.handle(cmd, ws):
                 continue
         except Exception as e:
             log.warning("Befehl %s fehlgeschlagen: %s", t, e)
@@ -1216,6 +1217,8 @@ async def on_startup(app):
     extras.setup(CFG=CFG, values=values, state=state, push=push, broadcast=broadcast, save_config=save_config,
                  log=log, BASE=BASE, location=location_info, lock=lock)
     extras.start()
+    lights.setup(CFG=CFG, broadcast=broadcast, save_config=save_config, log=log)
+    lights.start()
 
 
 async def on_shutdown(app):
