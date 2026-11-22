@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.5.3",
+    "date": "2026-11-22",
+    "changes": [
+      "Push-Nachrichten heißen jetzt eindeutig „🚨 BEWEGUNGSALARM – Wohnmobil“ mit Uhrzeit"
+    ]
+  },
+  {
     "version": "1.5.2",
     "date": "2026-11-22",
     "changes": [

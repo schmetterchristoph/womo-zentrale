@@ -643,7 +643,7 @@ async def guard_set(armed: bool):
     g.update({"armed": armed, "triggered": False, "base": None, "since": time.time() if armed else 0})
     await broadcast({"type": "guard", "guard": guard_public()})
     if armed:
-        await push("Womo: Alarm scharf", "Der Bewegungsalarm ist eingeschaltet.", "low")
+        await push("Bewegungsalarm scharf", "Der Bewegungsalarm im Wohnmobil ist eingeschaltet.", "low")
 
 
 async def guard_check(roll, pitch):
@@ -662,8 +662,9 @@ async def guard_check(roll, pitch):
             await broadcast({"type": "guard", "guard": guard_public()})
         if now - g["last_push"] > float(c.get("repeat_min", 5)) * 60:
             g["last_push"] = now
-            ok = await push("Womo: Bewegung erkannt!",
-                            f"Der Lagesensor hat eine Bewegung von {d:.1f}° gemessen ({time.strftime('%H:%M:%S')}).")
+            ok = await push("🚨 BEWEGUNGSALARM – Wohnmobil",
+                            f"Bewegungsalarm! Das Wohnmobil wurde um {time.strftime('%H:%M:%S')} Uhr bewegt "
+                            f"(Neigung hat sich um {d:.1f}° geändert).")
             log.warning("Bewegungsalarm ausgelöst (%.2f°), Push %s", d, "gesendet" if ok else "fehlgeschlagen")
 
 
@@ -1039,7 +1040,7 @@ async def ws_handler(request):
             if not topic:
                 res = (False, "Kein Push-Kanal eingetragen")
             else:
-                res = await push("Womo: Test-Alarm", "Die Push-Nachricht funktioniert. So klingelt auch ein echter Bewegungsalarm.", "urgent", detail=True)
+                res = await push("🚨 BEWEGUNGSALARM – Test", "Test: So meldet sich ein Bewegungsalarm vom Wohnmobil.", "urgent", detail=True)
             await ws.send_str(json.dumps({"type": "push_result", "ok": res[0], "msg": res[1], "topic": topic}))
         elif t == "ac_set":
             asyncio.create_task(gree_set(cmd))
