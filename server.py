@@ -1039,7 +1039,7 @@ async def ws_handler(request):
             if not topic:
                 res = (False, "Kein Push-Kanal eingetragen")
             else:
-                res = await push("Womo: Test", "Die Push-Nachricht funktioniert.", "default", detail=True)
+                res = await push("Womo: Test-Alarm", "Die Push-Nachricht funktioniert. So klingelt auch ein echter Bewegungsalarm.", "urgent", detail=True)
             await ws.send_str(json.dumps({"type": "push_result", "ok": res[0], "msg": res[1], "topic": topic}))
         elif t == "ac_set":
             asyncio.create_task(gree_set(cmd))

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.5.2",
+    "date": "2026-11-22",
+    "changes": [
+      "Test-Push kommt jetzt mit höchster Priorität – genau wie ein echter Bewegungsalarm (lauter Ton, auch bei „Nicht stören“, wenn in der ntfy-App erlaubt)"
+    ]
+  },
+  {
     "version": "1.5.1",
     "date": "2026-11-22",
     "changes": [
