@@ -145,6 +145,7 @@ input[type=range]{width:100%;height:40px;accent-color:var(--blue)}
 .pinKey:active{background:var(--cyan);color:#001018}
 .pinOk{background:var(--green);border-color:var(--green);color:#fff;font-size:22px}
 .verTag{font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:8px;padding:2px 8px}
+#sleepBox{position:absolute;inset:0;background:#000;z-index:80;display:none;cursor:none}
 </style>
 </head>
 <body>
@@ -176,7 +177,7 @@ input[type=range]{width:100%;height:40px;accent-color:var(--blue)}
 const V = {};                 // "dienst/instanz/pfad" -> Wert
 let ST = {cerbo:"Verbinde ...", online:false, shr:"", shr_enabled:false, portal_id:""};
 let LITHIUM = {}, LEVEL = null, AC = null, GUARD = null;
-let APPVER = null, UPD = null, CHANGELOG = [];
+let APPVER = null, UPD = null, CHANGELOG = [], REBOOT_MSG = "";
 const appVersion = () => ST.app_version || (CHANGELOG[0] && CHANGELOG[0].version) || "";
 const BATSCAN = {open: false, busy: false, found: [], searched: false};
 let WX = null, PLACE = "";
@@ -236,6 +237,7 @@ function connect(){
     }
     else if (m.type === "update") UPD = m.update;
     else if (m.type === "changelog") CHANGELOG = m.changelog;
+    else if (m.type === "reboot_result") REBOOT_MSG = m.msg;
     else if (m.type === "pin_result") { if (m.ok) pinClose(); else { PIN.val = ""; PIN.msg = "Falsche PIN"; pinRender(); } }
     else if (m.type === "weather") { WX = m.weather; PLACE = m.place; }
     else if (m.type === "lithium") LITHIUM = m.lithium;
@@ -286,6 +288,8 @@ function runAction(a){
   else if (cmd === "levelcal") send({type:"level_cal"});
   else if (cmd === "bat") batAction(p);
   else if (cmd === "fs") fsToggle();
+  else if (cmd === "reboot") { REBOOT_MSG = "Der Pi startet neu ..."; send({type: "reboot"}); }
+  else if (cmd === "sto") { ST.screen_timeout_min = Number(p[0]); send({type: "screen_timeout", value: Number(p[0])}); sleepReset(); }
   else if (cmd === "rollback") { send({type: "rollback"}); UPD = Object.assign({}, UPD, {status: "Wechsle zur vorherigen Version ..."}); }
   else if (cmd === "upd") { send({type: "update_check", apply: true}); UPD = Object.assign({}, UPD, {status: "Suche ..."}); }
   else if (cmd === "guard") send({type:"guard", armed: p[0] === "1"});
@@ -1821,6 +1825,11 @@ function updSys(){
         <div class="card"><h3>Verbindung</h3><div class="kv" id="sysConn" style="font-size:15px"></div></div>
         <div class="card"><h3>Helligkeit</h3><input type="range" min="5" max="100" value="80" id="bright">
           <div class="row" style="margin-top:8px"><button class="btn" style="flex:1" id="nightBtn">Nachtmodus</button></div></div>
+        <div class="card"><h3>Bildschirm aus nach</h3><div class="row" id="sysTo" style="flex-wrap:wrap;gap:6px"></div>
+          <div class="hint" style="margin-top:6px">Antippen weckt den Bildschirm wieder auf.</div></div>
+        <div class="card"><h3>Raspberry Pi</h3>
+          <button class="btn" style="width:100%;height:52px" data-hold="reboot"><i class="fill"></i><span>Neustart</span></button>
+          <div class="hint" id="rebootMsg" style="margin-top:6px">Gedrückt halten, um den Pi neu zu starten.</div></div>
         <div class="card"><h3>Updates</h3><div class="kv" id="sysUpd" style="font-size:14px"></div>
           <div id="sysLog" style="margin-top:10px"></div>
           <button class="btn" style="width:100%;margin-top:8px;height:46px" data-tap="upd">Jetzt nach Updates suchen</button>
@@ -1838,6 +1847,10 @@ function updSys(){
   html("sysVals", `<table>${rows}</table>`);
   html("sysConn", `<span>Cerbo</span><span>${esc(ST.cerbo)}</span><span>Portal-ID</span><span>${esc(ST.portal_id || "--")}</span>
     <span>Werte</span><span>${Object.keys(V).length}</span><span>Modus</span><span>${DEMO ? "Demo" : "Live"}</span>`);
+  const to = ST.screen_timeout_min ?? 0;
+  html("sysTo", [[0, "Nie"], [1, "1 min"], [5, "5 min"], [10, "10 min"], [15, "15 min"], [30, "30 min"], [60, "1 Std"]].map(([m, t]) =>
+    `<button class="btn ${to === m ? "sel" : ""}" style="height:40px;padding:0 10px;font-size:14px" data-tap="sto|${m}">${t}</button>`).join(""));
+  if (REBOOT_MSG) html("rebootMsg", esc(REBOOT_MSG));
   const u = UPD || {};
   const av = appVersion();
   html("sysLog", CHANGELOG.slice(0, 2).map((e, i) => `<div style="margin-top:${i ? 10 : 0}px">
@@ -2121,6 +2134,29 @@ function pinSubmit(){
   if (PIN.val === "3784") { pinClose(); try { document.exitFullscreen(); } catch (e) {} }   // Vorschau
   else { PIN.val = ""; PIN.msg = "Falsche PIN"; pinRender(); }
 }
+
+// Bildschirmabschaltung: nach X Minuten ohne Berührung schwarz; erster Tipp weckt nur auf
+let lastTouch = Date.now(), asleep = false;
+function sleepReset(){ lastTouch = Date.now(); }
+function sleepSet(on){
+  asleep = on;
+  let el = document.getElementById("sleepBox");
+  if (!el) {
+    el = document.createElement("div"); el.id = "sleepBox"; document.getElementById("stage").appendChild(el);
+    el.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); sleepSet(false); sleepReset(); }, true);
+  }
+  el.style.display = on ? "block" : "none";
+  if (!DEMO && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+    const b = document.getElementById("bright");
+    send({type: "brightness", value: on ? 0 : Number(b ? b.value : 80)});
+  }
+}
+document.addEventListener("pointerdown", () => { if (!asleep) sleepReset(); }, true);
+setInterval(() => {
+  const min = ST.screen_timeout_min || 0;
+  if (asleep && (ringing || (GUARD && GUARD.triggered))) { sleepSet(false); sleepReset(); }   // Alarm weckt
+  if (!asleep && min > 0 && !ringing && Date.now() - lastTouch > min * 60000) sleepSet(true);
+}, 5000);
 
 // Start
 fit();

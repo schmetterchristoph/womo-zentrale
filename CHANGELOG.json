@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.3.0",
+    "date": "2026-11-22",
+    "changes": [
+      "Neue Taste „Neustart“ unter System → Raspberry Pi (gedrückt halten)",
+      "Bildschirm schaltet sich nach einstellbarer Zeit ab (Nie, 1 bis 60 Minuten) – Antippen weckt ihn",
+      "Wecker, Timer und Bewegungsalarm wecken den Bildschirm automatisch",
+      "Einmalig nötig: „bash install.sh“ ausführen, damit die Neustart-Taste funktioniert"
+    ]
+  },
+  {
     "version": "1.2.1",
     "date": "2026-11-22",
     "changes": [

@@ -721,6 +721,22 @@ async def rollback():
     os._exit(0)
 
 
+async def reboot_pi():
+    """Pi neu starten (Rechte dafür richtet install.sh ein)."""
+    for cmd in (["sudo", "-n", "/usr/sbin/reboot"], ["sudo", "-n", "/sbin/reboot"], ["systemctl", "reboot"]):
+        if not shutil.which(cmd[0]):
+            continue
+        try:
+            p = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+            await asyncio.wait_for(p.communicate(), 15)
+            if p.returncode == 0:
+                return True
+        except Exception:
+            pass
+    log.warning("Neustart nicht erlaubt – install.sh erneut ausführen")
+    return False
+
+
 async def update_loop():
     await asyncio.sleep(30)
     while True:
@@ -750,7 +766,8 @@ def status_msg():
             "lithium_cfg": [b.get("name") for b in CFG.get("lithium", {}).get("batteries", [])],
             "lithium_addr": [b.get("address", "") for b in CFG.get("lithium", {}).get("batteries", [])],
             "version": state["update"].get("version", ""),
-            "app_version": (load_changelog() or [{}])[0].get("version", ""), "ntfy_topic": CFG.get("alarm", {}).get("ntfy_topic", "")}
+            "app_version": (load_changelog() or [{}])[0].get("version", ""),
+            "screen_timeout_min": CFG.get("screen_timeout_min", 0), "ntfy_topic": CFG.get("alarm", {}).get("ntfy_topic", "")}
 
 
 async def broadcast(msg):
@@ -812,6 +829,16 @@ async def ws_handler(request):
             cerbo_write(str(cmd.get("path", "")), cmd.get("value"))
         elif t == "shr" and cmd.get("cmd") in ("level", "retract"):
             asyncio.create_task(shr_send(cmd["cmd"]))
+        elif t == "reboot":
+            await broadcast({"type": "reboot_result", "ok": True, "msg": "Der Pi startet neu ..."})
+            await asyncio.sleep(1)
+            if not await reboot_pi():
+                await ws.send_str(json.dumps({"type": "reboot_result", "ok": False,
+                    "msg": "Neustart nicht erlaubt – bitte einmal „bash install.sh“ ausführen"}))
+        elif t == "screen_timeout":
+            CFG["screen_timeout_min"] = max(0, int(cmd.get("value", 0)))
+            save_config()
+            await push_status()
         elif t == "rollback":
             asyncio.create_task(rollback())
         elif t == "update_check":

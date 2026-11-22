@@ -49,6 +49,10 @@ echo 'SUBSYSTEM=="backlight", RUN+="/bin/chmod 666 /sys/class/backlight/%k/brigh
   sudo tee /etc/udev/rules.d/99-womo-backlight.rules >/dev/null
 sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=backlight || true
 
+echo "== Neustart-Taste der Zentrale erlauben"
+echo "$USERNAME ALL=(root) NOPASSWD: /usr/sbin/reboot, /sbin/reboot" | sudo tee /etc/sudoers.d/womo-zentrale >/dev/null
+sudo chmod 440 /etc/sudoers.d/womo-zentrale
+
 echo "== Bildschirmschoner aus"
 sudo raspi-config nonint do_blanking 1 || true
 
