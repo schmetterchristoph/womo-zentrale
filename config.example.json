@@ -1,0 +1,67 @@
+{
+  "cerbo": {
+    "host": "172.24.24.1",
+    "port": 1883,
+    "user": "",
+    "password": "",
+    "portal_id": ""
+  },
+  "weather": {
+    "fallback_lat": 51.52,
+    "fallback_lon": 6.33,
+    "fallback_name": "Geldern"
+  },
+  "shr": {
+    "enabled": false,
+    "device_name": "",
+    "device_address": "",
+    "char_uuid": "",
+    "cmd_level_hex": "",
+    "cmd_retract_hex": ""
+  },
+  "vehicle": {
+    "name": "Dethleffs XXL A",
+    "wheelbase_m": 4.75,
+    "track_m": 2.0
+  },
+  "web_port": 8080,
+  "lithium": {
+    "enabled": true,
+    "interval": 30,
+    "batteries": [
+      {
+        "name": "Akku 1",
+        "address": ""
+      },
+      {
+        "name": "Akku 2",
+        "address": ""
+      },
+      {
+        "name": "Akku 3",
+        "address": ""
+      }
+    ]
+  },
+  "level": {
+    "enabled": true,
+    "i2c_bus": 1,
+    "address": "0x68",
+    "swap_axes": false,
+    "invert_roll": false,
+    "invert_pitch": false
+  },
+  "gree": {
+    "enabled": true,
+    "ip": "",
+    "mac": "",
+    "name": "Gree Dachklima"
+  },
+  "alarm": {
+    "ntfy_server": "https://ntfy.sh",
+    "ntfy_topic": "",
+    "threshold_deg": 0.4,
+    "repeat_min": 5
+  },
+  "auto_update": true
+}

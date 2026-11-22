@@ -1,0 +1,8 @@
+config.json
+alarms.json
+level_calibration.json
+config.json.tmp
+.needs_install
+static/vendor/
+__pycache__/
+*.pyc
