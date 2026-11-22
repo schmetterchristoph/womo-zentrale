@@ -16,8 +16,8 @@ html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:sys
 #dim{position:absolute;inset:0;background:#000;pointer-events:none;opacity:0;transition:opacity .4s}
 /* Navigation */
 nav{grid-row:1/3;background:#070b10;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:3px}
-nav button{width:76px;height:55px;border:0;border-radius:16px;background:transparent;color:var(--mute);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;font-family:inherit;cursor:pointer}
-nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button{width:76px;height:55px;border:0;border-radius:16px;background:transparent;color:#b4c2d2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;font-weight:600;letter-spacing:.2px;font-family:inherit;cursor:pointer;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+nav button svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;shape-rendering:geometricPrecision;stroke-linecap:round;stroke-linejoin:round}
 nav button.on{background:var(--panel2);color:var(--blue)}
 /* Kopfzeile */
 header{display:flex;align-items:center;gap:18px;padding:0 24px;border-bottom:1px solid var(--line)}
@@ -1909,9 +1909,17 @@ setInterval(schedule, 5000);
 function fit(){
   const s = Math.min(innerWidth / 1280, innerHeight / 720);
   const st = document.getElementById("stage");
-  st.style.transform = `scale(${s})`;
-  st.style.left = (innerWidth - 1280 * s) / 2 + "px";
-  st.style.top = (innerHeight - 720 * s) / 2 + "px";
+  // "zoom" statt "transform: scale" -> Schrift und Symbole werden scharf neu gezeichnet statt hochgerechnet
+  if (CSS.supports("zoom", "1")) {
+    st.style.transform = "";
+    st.style.zoom = s;
+    st.style.left = (innerWidth - 1280 * s) / 2 / s + "px";
+    st.style.top = (innerHeight - 720 * s) / 2 / s + "px";
+  } else {
+    st.style.transform = `scale(${s})`;
+    st.style.left = (innerWidth - 1280 * s) / 2 + "px";
+    st.style.top = (innerHeight - 720 * s) / 2 + "px";
+  }
 }
 addEventListener("resize", fit);
 
