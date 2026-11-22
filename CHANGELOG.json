@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.5.7",
+    "date": "2026-11-22",
+    "changes": [
+      "Extras → Sensoren: Gasflaschen (Mopeka), Reifendruck (Bluetooth-Ventilkappen), Türen/Fenster und Wassermelder (Shelly BLU)",
+      "Neue Warnungen: Gas fast leer, Reifendruck zu niedrig, Wasser erkannt – Fenster/Tür auf bei scharfem Bewegungsalarm",
+      "Beim Losfahren Warnung vor offenen Fenstern und Türen",
+      "Extras → Kamera: Reolink-Kamerabild direkt in der Zentrale",
+      "Nachtmodus automatisch von Sonnenuntergang bis Sonnenaufgang (System → Helligkeit → Auto)",
+      "Sprache versteht jetzt auch „Wie viel Gas haben wir?“ und „Wie ist der Reifendruck?“"
+    ]
+  },
+  {
     "version": "1.5.6",
     "date": "2026-11-22",
     "changes": [

@@ -156,14 +156,14 @@ WARN_DEFAULTS = {
     "shore_lost": True, "freezer_max": -10, "fridge_max": 10, "frost_temp": 1, "gust_kmh": 60,
     "off": [],
 }
-WARN_IDS = ["soc", "soc_crit", "fresh", "grey", "black", "shore", "freezer", "fridge", "frost", "storm"]
+WARN_IDS = ["soc", "soc_crit", "fresh", "grey", "black", "shore", "freezer", "fridge", "frost", "storm", "gas", "tpms", "leak"]
 WARN_NAMES = {"soc": "Akku niedrig", "soc_crit": "Akku fast leer", "fresh": "Frischwasser fast leer",
               "grey": "Grauwasser fast voll", "black": "Toilette fast voll", "shore": "Landstrom ausgefallen",
               "freezer": "Gefrierfach zu warm", "fridge": "Kühlschrank zu warm", "frost": "Frostwarnung",
-              "storm": "Sturmwarnung"}
+              "storm": "Sturmwarnung", "gas": "Gas fast leer", "tpms": "Reifendruck zu niedrig", "leak": "Wassermelder"}
 # wie viele Prüfungen (je 30 s) eine Bedingung anstehen muss, bevor gewarnt wird
 WARN_HOLD = {"freezer": 20, "fridge": 20, "soc": 4, "soc_crit": 2, "fresh": 4, "grey": 4, "black": 4, "shore": 4}
-WARN_PRIO = {"soc_crit": "urgent", "shore": "high", "storm": "high", "freezer": "high", "soc": "high"}
+WARN_PRIO = {"leak": "urgent", "tpms": "urgent", "soc_crit": "urgent", "shore": "high", "storm": "high", "freezer": "high", "soc": "high"}
 
 WARN = {}               # id -> {"title", "text", "since", "pushed"}
 _warn_count = {}
@@ -234,6 +234,11 @@ def _check_conditions():
             res["fridge"] = (t > c["fridge_max"] - (1 if active("fridge") else 0), "🥶 Kühlschrank zu warm",
                              f"{n}: {t:.1f} °C (Grenze {c['fridge_max']} °C).")
 
+    if S.get("sensor_checks"):
+        try:
+            res.update(S["sensor_checks"](active))
+        except Exception as e:
+            log().info("Sensor-Warnungen: %s", e)
     wx = st.get("weather") or {}
     h = wx.get("hourly") or {}
     if h.get("time"):
@@ -565,6 +570,10 @@ async def drive_tick():
         msgs = []
         if shore_on():
             msgs.append("STROMKABEL NOCH EINGESTECKT!")
+        contacts = S["open_contacts"]() if S.get("open_contacts") else []
+        if contacts:
+            msgs.append("OFFEN: " + ", ".join(contacts) + "!")
+            open_items = [f"⚠ {c} ist offen" for c in contacts] + open_items
         if open_items:
             msgs.append("Noch offen: " + ", ".join(open_items[:6]) + (" …" if len(open_items) > 6 else ""))
         if msgs and not DRIVE["alerted"]:

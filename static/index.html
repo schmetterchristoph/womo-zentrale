@@ -181,7 +181,7 @@ input[type=range]{width:100%;height:40px;accent-color:var(--blue)}
 .vcH{font-size:15px;color:var(--mute);margin-bottom:3px}.vcR{font-size:20px;font-weight:650}
 /* Extras-Seite */
 .tabs{display:flex;gap:8px;margin-bottom:14px}
-.tab{height:46px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:#b4c2d2;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px}
+.tab{height:46px;padding:0 15px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:#b4c2d2;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px}
 .tab.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .tabBadge{background:var(--orange);color:#fff;border-radius:10px;padding:1px 8px;font-size:13px}
 .exPane{position:absolute;left:22px;right:22px;top:78px;bottom:18px}
@@ -313,7 +313,7 @@ function connect(){
   ws.onopen = () => { opened = true; };
   ws.onmessage = ev => {
     const m = JSON.parse(ev.data);
-    if (exMessage(m) || lgMessage(m) || vcMessage(m)) {}
+    if (exMessage(m) || lgMessage(m) || vcMessage(m) || snMessage(m)) {}
     else if (m.type === "snapshot") { for (const k in V) delete V[k]; Object.assign(V, m.values); }
     else if (m.type === "delta") Object.assign(V, m.values);
     else if (m.type === "status") {
@@ -368,7 +368,7 @@ document.addEventListener("click", e => {
 });
 function runAction(a){
   const [cmd, ...p] = a.split("|");
-  if (exAction(cmd, p) || lgAction(cmd, p) || vcAction(cmd, p)) { schedule(); return; }
+  if (exAction(cmd, p) || lgAction(cmd, p) || vcAction(cmd, p) || snAction(cmd, p)) { schedule(); return; }
   if (cmd === "w") write(p[0], Number(p[1]));
   else if (cmd === "shr") send({type:"shr", cmd:p[0]});
   else if (cmd === "limit") limitStep(Number(p[0]), p[1]);
@@ -1932,7 +1932,8 @@ function updSys(){
       <div class="grid scroll" data-keep="sr" style="align-content:start;height:100%">
         <div class="card"><h3>Verbindung</h3><div class="kv" id="sysConn" style="font-size:15px"></div></div>
         <div class="card"><h3>Helligkeit</h3><input type="range" min="5" max="100" value="80" id="bright">
-          <div class="row" style="margin-top:8px"><button class="btn" style="flex:1" id="nightBtn">Nachtmodus</button></div></div>
+          <div class="row" style="margin-top:8px;gap:8px"><button class="btn" style="flex:1;min-width:0;padding:0 8px;font-size:16px" id="nightBtn">Nachtmodus</button><button class="btn" style="flex:1;min-width:0;padding:0 8px;font-size:16px" id="autoNightBtn">Auto 🌙</button></div>
+          <div class="hint" style="margin-top:6px">Automatisch: dunkler von Sonnenuntergang bis Sonnenaufgang.</div></div>
         <div class="card"><h3>Bildschirm aus nach</h3><div class="row" id="sysTo" style="flex-wrap:wrap;gap:6px"></div>
           <div class="hint" style="margin-top:6px">Antippen weckt den Bildschirm wieder auf.</div></div>
         <div class="card"><h3>Raspberry Pi</h3>
@@ -1948,8 +1949,12 @@ function updSys(){
       </div></div>`;
     document.getElementById("sysSearch").addEventListener("input", e => { filter = e.target.value.toLowerCase(); schedule(); });
     document.getElementById("bright").addEventListener("change", e => send({type:"brightness", value:Number(e.target.value)}));
-    document.getElementById("nightBtn").addEventListener("click", () => { night = !night; applyNight(); });
+    document.getElementById("nightBtn").addEventListener("click", () => { night = !night; applyNight(); schedule(); });
+    document.getElementById("autoNightBtn").addEventListener("click", () => { AUTO_NIGHT = !AUTO_NIGHT; autoNightLast = null;
+      try { localStorage.setItem("womoAutoNight", AUTO_NIGHT ? "1" : "0"); } catch (e) {} autoNightTick(); schedule(); });
   }
+  document.getElementById("nightBtn").classList.toggle("sel", !!night);
+  document.getElementById("autoNightBtn").classList.toggle("sel", AUTO_NIGHT);
   html("sysDevs", list.map(d => { const [s, i] = d.split("/");
     return `<button class="btn ${d === selDev ? "sel" : ""}" data-tap="dev|${d}">${esc(devName(s, i))}<br><span class="mute" style="font-size:12px">${d}</span></button>`; }).join(""));
   html("sysVals", `<table>${rows}</table>`);
@@ -2001,7 +2006,7 @@ let WARNS = [], FC = null, CHK = null, MAINT = null, TRIP = null, NET = null, WC
 const HISTD = {};
 let EXTAB = "abfahrt", HRANGE = "24h";
 const LOC = {open: false, busy: false, res: null, err: false, q: ""};
-const EX_TABS = [["abfahrt", "Abfahrt"], ["reise", "Reisekarte"], ["verlauf", "Verlauf"], ["wartung", "Wartung"], ["warn", "Warnungen"], ["sprache", "Sprache"], ["handy", "Handy"]];
+const EX_TABS = [["abfahrt", "Abfahrt"], ["reise", "Reise"], ["verlauf", "Verlauf"], ["wartung", "Wartung"], ["warn", "Warnungen"], ["sensoren", "Sensoren"], ["kamera", "Kamera"], ["sprache", "Sprache"], ["handy", "Handy"]];
 const DAYMS = 864e5;
 const dDE = t => new Date(t).toLocaleDateString("de-DE", {day: "2-digit", month: "2-digit", year: "numeric"});
 const dShort = t => new Date(t).toLocaleDateString("de-DE", {weekday: "short", day: "2-digit", month: "2-digit"});
@@ -2054,6 +2059,7 @@ function exEnter(){
   if (EXTAB === "handy") send({type: "net_info"});
   if (EXTAB === "warn") send({type: "warn_cfg"});
   if (EXTAB === "sprache") send({type: "voice_get"});
+  if (EXTAB === "sensoren" || EXTAB === "kamera") { send({type: "sens_get"}); CAM_T = 0; }
   schedule(true);
 }
 
@@ -2122,6 +2128,22 @@ function exSkeleton(){
     <div class="card" style="display:flex;flex-direction:column;min-height:0"><h3>Einstellungen · Push aufs Handy</h3>
       <div class="scroll" data-keep="wc" style="flex:1;min-height:0"><div id="warnCfg"></div></div></div>
   </div></div>
+  <div class="exPane" id="ex-sensoren"><div style="display:flex;flex-direction:column;gap:12px;height:100%">
+    <div class="grid" style="grid-template-columns:1fr 1fr 1fr;height:340px;flex:none">
+      <div class="card" id="snGas"></div><div class="card" id="snTpms"></div><div class="card scroll" data-keep="snc" id="snCont"></div></div>
+    <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0"><h3>Gefundene Bluetooth-Sensoren · antippen zum Zuordnen</h3>
+      <div class="scroll" data-keep="snf" style="flex:1;min-height:0"><div id="snFound"></div></div></div>
+  </div></div>
+  <div class="exPane" id="ex-kamera"><div class="grid" style="grid-template-columns:1fr 330px;height:100%">
+    <div class="scroll" data-keep="cam" style="min-height:0"><div class="grid" id="camGrid" style="grid-template-columns:1fr 1fr"></div></div>
+    <div class="card scroll"><h3>Reolink-Kamera hinzufügen</h3>
+      <input type="text" id="camName" placeholder="Name, z. B. Rückfahrkamera">
+      <input type="text" id="camHost" placeholder="IP-Adresse, z. B. 192.168.8.60" style="margin-top:8px">
+      <input type="text" id="camUser" placeholder="Benutzer (meist admin)" style="margin-top:8px">
+      <input type="password" id="camPass" placeholder="Passwort der Kamera" style="margin-top:8px;width:100%;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:17px;padding:0 14px">
+      <button class="btn sel" style="width:100%;margin-top:10px" data-tap="camadd">Hinzufügen</button>
+      <div class="hint" style="margin-top:8px">Das Bild wird über den Pi geholt – das Passwort bleibt auf dem Pi. Aktualisiert sich alle 2 Sekunden.</div></div>
+  </div></div>
   <div class="exPane" id="ex-sprache"><div class="grid" style="grid-template-columns:1fr 1fr;height:100%">
     <div class="grid" style="align-content:start"><div class="card" id="vcCard"></div>
       <div class="card"><h3>Befehl ausprobieren (tippen statt sprechen)</h3>
@@ -2147,7 +2169,7 @@ function updExtras(){
     id === "warn" && WARNS.length ? ` <b class="tabBadge">${WARNS.length}</b>` : ""}${
     id === "wartung" && MAINT && MAINT.some(x => x.left != null && x.left <= 30) ? ` <b class="tabBadge">!</b>` : ""}</button>`).join(""));
   for (const [id] of EX_TABS) { const el = document.getElementById("ex-" + id); const d = EXTAB === id ? "" : "none"; if (el.style.display !== d) el.style.display = d; }
-  ({abfahrt: exAbfahrt, reise: exReise, verlauf: exVerlauf, wartung: exWartung, warn: exWarn, sprache: exSprache, handy: exHandy})[EXTAB]();
+  ({abfahrt: exAbfahrt, reise: exReise, verlauf: exVerlauf, wartung: exWartung, warn: exWarn, sprache: exSprache, handy: exHandy, sensoren: exSensoren, kamera: exKamera})[EXTAB]();
 }
 
 // ------------------------------------------------------------ Abfahrt ----
@@ -2322,7 +2344,7 @@ function exWarn(){
     : `<div class="empty" style="color:var(--green)">✓ Alles in Ordnung</div>`);
   if (!WCFG) { html("warnCfg", `<div class="mute">Lade ...</div>`); return; }
   const c = WCFG, off = new Set(c.off || []);
-  const ids = ["soc", "soc_crit", "fresh", "grey", "black", "shore", "freezer", "fridge", "frost", "storm"];
+  const ids = ["soc", "soc_crit", "fresh", "grey", "black", "shore", "freezer", "fridge", "frost", "storm", "gas", "tpms", "leak"];
   html("warnCfg", `<div class="wRow"><div><b>Warnungen aktiv</b></div><span></span><button class="tog ${c.enabled ? "on" : ""}" data-tap="wbool|enabled">${c.enabled ? "AN" : "AUS"}</button></div>
     <div class="wRow"><div><b>Push aufs Handy</b><div class="hint">über die ntfy-App</div></div><span></span><button class="tog ${c.push !== false ? "on" : ""}" data-tap="wbool|push">${c.push !== false ? "AN" : "AUS"}</button></div>` +
     ids.map(id => { const s = W_SET[id], on = !off.has(id) && (id !== "shore" || c.shore_lost);
@@ -2794,6 +2816,120 @@ function exSprache(){
   html("vcLast", v.heard ? `<div class="warnItem" style="border-left-color:var(--blue);background:rgba(59,163,255,.1)"><b>„${esc(v.heard)}“</b><span style="color:#cfe6ff">${esc(v.reply || "")}</span></div>` : "");
 }
 
+// ===========================================================================
+// Sensoren (Gas, Reifen, Türen/Fenster, Wasser) und Kameras
+// ===========================================================================
+let SNS = null, SNS_PICK = null, CAM_T = 0;
+const ROLE_KIND = r => r.startsWith("gas") ? "mopeka" : r.startsWith("tpms") ? "tpms" : "bthome";
+function snMessage(m){ if (m.type !== "sensors") return false; SNS = m; return true; }
+function snAction(cmd, p){
+  if (cmd === "snpick") { SNS_PICK = SNS_PICK === p[0] ? null : p[0]; return true; }
+  if (cmd === "snrole") { send({type: "sens_assign", address: p[0], role: p[1]}); SNS_PICK = null; return true; }
+  if (cmd === "snun") { send({type: "sens_unassign", address: p[0]}); SNS_PICK = null; return true; }
+  if (cmd === "gasfull") { send({type: "gas_full", role: p[0]}); return true; }
+  if (cmd === "tpmsnom") { send({type: "tpms_nominal"}); return true; }
+  if (cmd === "tpmsmin") { send({type: "tpms_min", delta: Number(p[0])}); return true; }
+  if (cmd === "camadd") { camAdd(); return true; }
+  if (cmd === "camdel") { send({type: "cam_del", id: p[0]}); return true; }
+  return false;
+}
+function snByRole(role){
+  if (!SNS) return null;
+  const d = SNS.devices.find(x => x.role === role);
+  return d ? SNS.found.find(f => f.address === d.address.toUpperCase()) || {address: d.address, data: null, stale: true} : null;
+}
+function gasSvg(pct){
+  const h = 112, f = pct == null ? 0 : Math.max(0, Math.min(100, pct)) / 100 * (h - 20), col = pct == null ? "#5d6b7a" : pct < 20 ? "#ff4d5e" : pct < 40 ? "#ff8a3d" : "#34e39b";
+  return `<svg viewBox="0 0 90 ${h + 30}" width="80" height="${h + 24}"><rect x="30" y="0" width="30" height="16" rx="4" fill="#2f4a63"/>
+    <rect x="8" y="14" width="74" height="${h}" rx="30" fill="#0d1925" stroke="#3a5a78" stroke-width="2"/>
+    <clipPath id="gc${Math.round(pct ?? -1)}"><rect x="8" y="14" width="74" height="${h}" rx="30"/></clipPath>
+    <rect x="8" y="${14 + h - 10 - f}" width="74" height="${f + 10}" fill="${col}" opacity=".85" clip-path="url(#gc${Math.round(pct ?? -1)})"/>
+    <text x="45" y="${h / 2 + 22}" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">${pct == null ? "--" : pct + "%"}</text></svg>`;
+}
+function exSensoren(){
+  if (!SNS) { html("snGas", `<div class="mute">Lade ...</div>`); return; }
+  // Gas
+  html("snGas", `<h3>Gasflaschen</h3><div class="row" style="justify-content:space-around">${["gas1", "gas2"].map(r => {
+    const s = snByRole(r), d = s && s.data;
+    return `<div style="text-align:center">${gasSvg(d ? d.percent : null)}<div style="font-weight:650">${esc(SNS.roles[r])}</div>
+      <div class="hint">${!s ? "nicht zugeordnet" : !d ? "kein Signal" : `${d.level_mm} mm · ${d.temperature} °C${d.quality < 2 ? " · Signal schwach" : ""}`}</div>
+      ${d ? holdBtn("Ist voll", "gasfull|" + r, "sm") : ""}</div>`; }).join("")}</div>
+    <div class="hint" style="margin-top:6px">Nach dem Flaschenwechsel „Ist voll“ gedrückt halten.</div>`);
+  // Reifen
+  const W = {tpms_vl: [56, 70], tpms_vr: [56, 182], tpms_hl: [262, 70], tpms_hr: [262, 182]};
+  const wheel = r => { const s = snByRole(r), d = s && s.data, [x, y] = W[r]; const nom = SNS.tpms_nominal[r];
+    const bad = d && (d.bar < Math.max(SNS.tpms_min_bar, nom ? nom - .4 : 0) || d.alarm);
+    return `<rect x="${x - 22}" y="${y - 13}" width="44" height="26" rx="7" fill="${!d ? "#2f4a63" : bad ? "#ff4d5e" : "#34e39b"}"/>
+      <text x="${x}" y="${y < 120 ? y - 22 : y + 36}" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">${d ? fp(d.bar, 1, "bar") : "--"}</text>
+      <text x="${x}" y="${y < 120 ? y - 42 : y + 54}" text-anchor="middle" font-size="12" fill="#8697ab">${d ? fp(d.temperature, 0, "°C") : s ? "kein Signal" : "–"}</text>`; };
+  html("snTpms", `<h3>Reifendruck</h3><svg viewBox="0 0 320 250" width="100%" height="168">
+      <rect x="30" y="70" width="262" height="112" rx="18" fill="#0f1d2b" stroke="#3a5a78" stroke-width="2"/><path d="M30 92 Q14 126 30 160" fill="none" stroke="#7fe8ff" stroke-opacity=".5" stroke-width="5"/>
+      ${Object.keys(W).map(wheel).join("")}</svg>
+    <div class="row" style="justify-content:space-between"><span class="hint">Warnen unter</span>
+      <div class="step"><button class="btn sm" data-tap="tpmsmin|-0.1">−</button><b>${fp(SNS.tpms_min_bar, 1, "bar")}</b><button class="btn sm" data-tap="tpmsmin|0.1">+</button></div></div>
+    <div class="row" style="justify-content:space-between;margin-top:6px"><span class="hint">oder 0,4 bar unter Soll</span>${holdBtn("Als Soll merken", "tpmsnom", "sm")}</div>`);
+  // Kontakte
+  const cont = SNS.devices.filter(d => ROLE_KIND(d.role) === "bthome").map(d => {
+    const s = SNS.found.find(f => f.address === d.address.toUpperCase()), x = s && s.data;
+    let st = "kein Signal", col = "var(--mute)";
+    if (x) {
+      if (x.moisture != null) { st = x.moisture ? "WASSER!" : "trocken"; col = x.moisture ? "var(--red)" : "var(--green)"; }
+      else if (x.motion != null) { st = x.motion ? "Bewegung" : "ruhig"; col = x.motion ? "var(--orange)" : "var(--green)"; }
+      else if (x.window != null || x.door != null || x.opening != null) { const o = x.window ?? x.door ?? x.opening; st = o ? "OFFEN" : "zu"; col = o ? "var(--orange)" : "var(--green)"; }
+      else if (x.temperature != null) { st = fp(x.temperature, 1, "°C"); col = "var(--text)"; }
+    }
+    return `<div class="wRow" style="grid-template-columns:1fr auto"><div><b>${esc(SNS.roles[d.role] || d.role)}</b><div class="hint">${x && x.battery != null ? "Batterie " + x.battery + " %" : esc(d.address)}</div></div>
+      <span class="mid" style="font-size:20px;color:${col}">${st}</span></div>`; }).join("");
+  html("snCont", `<h3>Türen, Fenster, Wasser</h3>${cont || `<div class="hint">Noch keine Sensoren zugeordnet. Shelly-BLU-Sensoren erscheinen unten unter „Gefunden“.</div>`}
+    <div class="hint" style="margin-top:6px">Ist der Bewegungsalarm scharf, kommt beim Öffnen sofort ein Alarm aufs Handy. Beim Losfahren wird vor offenen Fenstern gewarnt.</div>`);
+  // Gefunden
+  html("snFound", !SNS.ble ? `<div class="hint">Bluetooth ist auf dem Pi nicht verfügbar.</div>` : SNS.found.length ? SNS.found.map(f => {
+    const d = f.data || {}, k = f.kind;
+    const sum = k === "mopeka" ? `Gas ${d.percent} % (${d.level_mm} mm)` : k === "tpms" ? `${fp(d.bar, 2, "bar")} · ${fp(d.temperature, 0, "°C")}` :
+      Object.entries(d).filter(([a]) => !["packet"].includes(a)).map(([a, v]) => `${a} ${v}`).join(" · ");
+    const icon = k === "mopeka" ? "🔥" : k === "tpms" ? "🛞" : "📡";
+    const roles = Object.keys(SNS.roles).filter(r => ROLE_KIND(r) === k);
+    return `<div class="stay" style="display:block"><div class="row" style="gap:10px" data-tap="snpick|${f.address}">
+        <span style="font-size:24px">${icon}</span><div style="flex:1;min-width:0"><b>${f.role ? esc(SNS.roles[f.role]) : esc(f.name || "Unbekannt")}</b>
+        <div class="hint">${esc(f.address)} · ${esc(sum)} · ${f.rssi} dBm</div></div>
+        <button class="btn sm ${f.role ? "" : "sel"}">${f.role ? "Ändern" : "Zuordnen"}</button></div>
+      ${SNS_PICK === f.address ? `<div class="row" style="flex-wrap:wrap;gap:6px;margin-top:8px">${roles.map(r => `<button class="btn sm ${f.role === r ? "sel" : ""}" data-tap="snrole|${f.address}|${r}">${esc(SNS.roles[r])}</button>`).join("")}
+        ${f.role ? `<button class="btn sm" data-tap="snun|${f.address}">Entfernen</button>` : ""}</div>` : ""}</div>`; }).join("")
+    : `<div class="hint">Noch nichts gefunden. Der Pi hört alle 30 Sekunden nach Bluetooth-Sensoren in der Nähe.</div>`);
+}
+
+function camAdd(){
+  const g = id => document.getElementById(id).value.trim();
+  if (!g("camHost")) return;
+  send({type: "cam_add", name: g("camName") || "Kamera", host: g("camHost"), user: g("camUser") || "admin", password: document.getElementById("camPass").value});
+  for (const id of ["camName", "camHost", "camUser", "camPass"]) document.getElementById(id).value = "";
+  oskHide();
+}
+function exKamera(){
+  const cams = SNS ? SNS.cams : [];
+  const now = Date.now();
+  if (now - CAM_T > 1800) {
+    CAM_T = now;
+    html("camGrid", cams.length ? cams.map(c => `<div class="card" style="padding:10px"><div class="row" style="justify-content:space-between;margin-bottom:6px"><b>${esc(c.name)}</b>
+        <button class="iconBtn" data-hold="camdel|${c.id}"><i class="fill"></i>🗑</button></div>
+        <div style="position:relative;width:100%;aspect-ratio:16/9;border-radius:10px;background:#0c1620;overflow:hidden;display:flex;align-items:center;justify-content:center">
+          <span class="hint">Kein Bild – ist die Kamera im WLAN erreichbar?</span>
+          ${DEMO ? "" : `<img src="/cam/${c.id}.jpg?t=${now}" alt="" onerror="this.style.display='none'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`}</div></div>`).join("")
+      : `<div class="empty">Noch keine Kamera eingetragen.</div>`);
+  }
+}
+
+// Nachtmodus automatisch (Sonnenuntergang bis Sonnenaufgang)
+let AUTO_NIGHT = false, autoNightLast = null;
+try { AUTO_NIGHT = localStorage.getItem("womoAutoNight") === "1"; } catch (e) {}
+function autoNightTick(){
+  if (!AUTO_NIGHT || !WX || !WX.daily || !WX.daily.sunrise) return;
+  const now = Date.now(), sr = new Date(WX.daily.sunrise[0]).getTime(), ss = new Date(WX.daily.sunset[0]).getTime();
+  const dark = now < sr || now > ss + 15 * 60e3;
+  if (dark !== autoNightLast) { autoNightLast = dark; night = dark; applyNight(); }
+}
+setInterval(autoNightTick, 60e3);
+
 const RENDER = {start:updStart, energy:updEnergy, batt:updBatt, ac:updAc, tanks:updTanks, sw:updSw, level:updLevel, klima:updKlima, clock:updClock, radio:updRadio, wx:updWx, sys:updSys, extras:updExtras, licht:updLicht};
 let queued = false, lastPaint = 0;
 function schedule(force){
@@ -2893,6 +3029,18 @@ function startDemo(){
   demoExtras();
   demoExtrasData();
   demoLightsData();
+  SNS = {ble: true, roles: {gas1: "Gasflasche 1", gas2: "Gasflasche 2", tpms_vl: "Reifen vorne links", tpms_vr: "Reifen vorne rechts", tpms_hl: "Reifen hinten links", tpms_hr: "Reifen hinten rechts",
+    door_entry: "Eingangstür", door_cab: "Fahrerhaus-Tür", door_garage: "Heckgarage", door_service: "Serviceklappe", win_roof1: "Dachluke vorne", win_roof2: "Dachluke hinten",
+    win_sitz: "Fenster Sitzgruppe", win_bed: "Fenster Schlafraum", leak1: "Wassermelder Boiler", leak2: "Wassermelder Pumpe", motion: "Bewegungsmelder", temp: "Temperaturfühler"},
+    devices: [{address: "C1", role: "gas1"}, {address: "C2", role: "gas2"}, {address: "T1", role: "tpms_vl"}, {address: "T2", role: "tpms_vr"}, {address: "T3", role: "tpms_hl"}, {address: "T4", role: "tpms_hr"},
+      {address: "B1", role: "door_entry"}, {address: "B2", role: "win_roof1"}, {address: "B3", role: "leak1"}],
+    found: [{address: "C1", kind: "mopeka", role: "gas1", rssi: -62, data: {percent: 72, level_mm: 274, temperature: 9, quality: 3}},
+      {address: "C2", kind: "mopeka", role: "gas2", rssi: -66, data: {percent: 14, level_mm: 53, temperature: 9, quality: 3}},
+      {address: "T1", kind: "tpms", role: "tpms_vl", rssi: -70, data: {bar: 5.1, temperature: 12}}, {address: "T2", kind: "tpms", role: "tpms_vr", rssi: -71, data: {bar: 5.0, temperature: 12}},
+      {address: "T3", kind: "tpms", role: "tpms_hl", rssi: -74, data: {bar: 5.5, temperature: 11}}, {address: "T4", kind: "tpms", role: "tpms_hr", rssi: -75, data: {bar: 4.6, temperature: 11}},
+      {address: "B1", kind: "bthome", role: "door_entry", rssi: -55, data: {battery: 96, window: 0}}, {address: "B2", kind: "bthome", role: "win_roof1", rssi: -58, data: {battery: 91, window: 1}},
+      {address: "B3", kind: "bthome", role: "leak1", rssi: -60, data: {battery: 88, moisture: 0}}, {address: "7C:C6:B6:61:A2:01", kind: "bthome", role: null, name: "SBDW-002C", rssi: -64, data: {battery: 100, window: 0}}],
+    tpms_min_bar: 3.5, tpms_nominal: {tpms_vl: 5.0, tpms_vr: 5.0, tpms_hl: 5.5, tpms_hr: 5.5}, gas_full_mm: 380, cams: [{id: "c1", name: "Rückfahrkamera", host: "192.168.8.60"}]};
   VC = {enabled: true, state: "bereit", status: "Hört zu über plughw:CARD=ArrayUAC10,DEV=0", vosk: true, piper: true, espeak: false, mic: "reSpeaker XVF3800", wake: ["zentrale", "computer"], speak: true, heard: "licht im bad an", reply: "Bad an."};
   VC_STATE = "bereit"; vcDraw();
   schedule(true);
@@ -2914,6 +3062,8 @@ function demoCommand(m){
   if (m.type === "voice_listen") { VC_STATE = "hört"; vcDraw(); setTimeout(() => { VC_STATE = "bereit"; vcMessage({type: "voice_event", heard: "wie voll ist der akku", reply: "Der Akku hat 78 Prozent. Reicht noch ca. 2,5 Tage."}); }, 2500); return; }
   if (m.type === "voice_text") { vcMessage({type: "voice_event", heard: m.text, reply: "(Demo) Befehl verstanden."}); return; }
   if ((m.type || "").startsWith("voice")) return;
+  if (m.type === "sens_assign") { const f = SNS.found.find(x => x.address === m.address); if (f) f.role = m.role; SNS.devices = SNS.devices.filter(d => d.role !== m.role).concat([{address: m.address, role: m.role}]); return; }
+  if (["sens_get", "gas_full", "tpms_nominal", "tpms_min", "cam_add", "cam_del", "sens_unassign"].includes(m.type)) return;
   if (m.type === "ac_set") { for (const k in m) if (k !== "type") AC[k] = m[k]; return; }
   if (m.type === "guard") { GUARD.armed = m.armed; GUARD.triggered = false; return; }
   if (m.type === "bat_scan") { setTimeout(() => { BATSCAN.busy = false; BATSCAN.searched = true; BATSCAN.found = [

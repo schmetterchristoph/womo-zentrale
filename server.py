@@ -32,6 +32,7 @@ import paho.mqtt.client as mqtt
 import extras
 import lights
 import voice
+import sensors
 
 try:
     from bleak import BleakClient, BleakScanner
@@ -1132,7 +1133,8 @@ async def ws_handler(request):
             continue
         t = cmd.get("type")
         try:
-            if await lights.handle(cmd, ws) or await extras.handle(cmd, ws) or await voice.handle(cmd, ws):
+            if await lights.handle(cmd, ws) or await extras.handle(cmd, ws) or await voice.handle(cmd, ws) \
+                    or await sensors.handle(cmd, ws):
                 continue
         except Exception as e:
             log.warning("Befehl %s fehlgeschlagen: %s", t, e)
@@ -1223,6 +1225,11 @@ async def on_startup(app):
     voice.setup(CFG=CFG, BASE=BASE, broadcast=broadcast, save_config=save_config, log=log, values=values, state=state,
                 lights=lights, extras=extras, gree_set=gree_set, guard_set=guard_set)
     voice.start()
+    sensors.setup(CFG=CFG, broadcast=broadcast, save_config=save_config, log=log, push=push, ble_lock=ble_lock,
+                  BleakScanner=BleakScanner, state=state)
+    sensors.start()
+    extras.S.update(sensor_checks=sensors.checks, open_contacts=sensors.open_contacts)
+    voice.S.update(sensors=sensors)
 
 
 async def on_shutdown(app):
@@ -1234,6 +1241,7 @@ def main():
     app = web.Application()
     app.router.add_get("/", index)
     app.router.add_get("/ws", ws_handler)
+    app.router.add_get("/cam/{cid}.jpg", sensors.cam_route)
     app.router.add_static("/static", BASE / "static")
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)

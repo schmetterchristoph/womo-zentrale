@@ -17,6 +17,7 @@ Raspberry Pi mit 7-Zoll-Touchdisplay. Zeigt alles vom Cerbo GX, das Wetter am ak
 | **Wetter** | aktuell, 24-Stunden-Verlauf mit Regenwahrscheinlichkeit, 7 Tage, Böen, Sonnenauf- und -untergang, UV. Der Ort kommt automatisch (GPS → WLAN-Ortung → Internet) oder per **„📍 Ort ändern“** |
 | **Uhr** | große Uhr, Timer mit Schnellwahl, Wecker mit Wochentagen und Schlummern |
 | **Radio** | Webradio: Top-Sender Deutschland, Pop, Rock, Schlager, Nachrichten, Oldies, 80er, Jazz, Klassik; Favoriten |
+| **Licht** | Grundriss des Womos mit großen Lichtschaltern (Shelly), Dimmen, Szenen. ⚙ Einrichten: Lampen benennen, Platz wählen, Shelly zuordnen |
 | **Extras** | **Abfahrt** (Checkliste, Warnung beim Losfahren), **Reisekarte** (Strecke und Stellplätze), **Verlauf** (Akku, Solar, Verbrauch, Akku-Prognose, Tagesbilanz), **Wartung** (Termine mit Erinnerung), **Warnungen** (Grenzwerte einstellen), **Handy** (QR-Code, Fernzugang) |
 | **System** | **alle Werte**, die der Cerbo liefert, nach Gerät sortiert und durchsuchbar; Helligkeit, Nachtmodus, GPS |
 
@@ -186,6 +187,29 @@ Ohne GPS kannst du Stellplätze mit „📍 Aktuellen Ort als Stellplatz eintrag
 **Standort**: Reihenfolge GPS (Cerbo) → selbst gewählter Ort → WLAN-Ortung → Internet-Standort → Geldern.
 Die WLAN-Ortung schickt die Kennungen der umliegenden WLAN-Netze (keine Inhalte) an die offene Datenbank beacondb.net.
 Abschalten: in `config.json` bei `weather` den Wert `"auto_location": false` setzen.
+
+## Licht (Shelly)
+
+Geeignet für 12 V: **Shelly Plus RGBW PM** (4 dimmbare Lichtkreise je Gerät) und **Shelly Plus 1** (an/aus).
+1. Shellys mit der Shelly-App ins **gleiche WLAN wie der Pi** bringen.
+2. In der Zentrale **Licht → ⚙ Einrichten → „Shellys im WLAN suchen“**.
+3. Lampe links auswählen, Namen und Platz im Womo festlegen, dann den passenden Shelly-Kanal antippen.
+Beim RGBW PM in der Shelly-App den Modus **„Licht“ (4 Kanäle)** wählen, damit jede Lampe einzeln dimmbar ist.
+
+## Sprachsteuerung
+
+Hardware: USB-Mikrofon, am besten **reSpeaker XVF3800 USB** (Lautsprecher an dessen Klinkenbuchse).
+Einrichten: **Extras → Sprache → „Sprachsteuerung einrichten“** – lädt Spracherkennung und Stimme (ca. 150 MB) ohne Terminal.
+Danach: „**Zentrale**, Licht aus“, „Zentrale, wie voll ist der Akku?“ usw. – alles läuft offline auf dem Pi.
+Ohne Weckwort: Mikrofon-Taste unten rechts antippen.
+
+## Sensoren und Kamera
+
+Die Zentrale hört per Bluetooth automatisch mit: **Mopeka Pro Check** (Gas), Reifendruck-Ventilkappen **„TPMS1_…“**,
+**Shelly BLU Door/Window** und andere BTHome-Sensoren (Fenster, Türen, Wassermelder, Bewegung).
+Unter **Extras → Sensoren** tauchen sie unter „Gefunden“ auf – antippen und Rolle wählen (z. B. „Gasflasche 1“, „Reifen vorne links“).
+Warnungen: Gas fast leer, Reifendruck zu niedrig, Wasser erkannt; Fenster/Tür geöffnet bei scharfem Bewegungsalarm.
+**Extras → Kamera**: Reolink-Kamera mit IP-Adresse, Benutzer und Passwort eintragen.
 
 ## 9. Hilfe
 
