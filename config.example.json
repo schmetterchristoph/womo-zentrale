@@ -45,6 +45,8 @@
   },
   "level": {
     "enabled": true,
+    "sensor": "auto",
+    "usb_device": "",
     "i2c_bus": 1,
     "address": "0x68",
     "swap_axes": false,

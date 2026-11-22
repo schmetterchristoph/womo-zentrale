@@ -33,7 +33,7 @@ Alles, was etwas schaltet, startet nur nach **gedrückt halten**. Oben in der Ko
 | **microSD-Karte 32 GB** (Klasse A2) | |
 | **Spannungswandler 12 V → 5 V USB-C, mind. 5 A** | für die Bordbatterie |
 | **Gehäuse / Einbaurahmen für das Touch Display 2** | für die Wandmontage |
-| **Lagesensor MPU-6050** (Platine „GY-521“) + 4 Steckkabel | für Wasserwaage und Bewegungsalarm, ca. 5 € |
+| **Lagesensor MPU-6050** (Platine „GY-521“) + 4 Steckkabel | für Wasserwaage und Bewegungsalarm, ca. 5 € – **oder** einfacher: WitMotion **WT61C-USB-TTL** (USB, ca. 33 €) |
 | **Lautsprecher** (USB oder Bluetooth) | für Radio, Wecker und Timer – der Pi 5 hat keinen Kopfhörerausgang |
 | *optional:* **USB-GPS-Maus am Cerbo** | damit Wetter und Ort unterwegs automatisch stimmen |
 
@@ -72,6 +72,12 @@ Von jedem Handy oder Laptop im WLAN ist die Oberfläche zusätzlich unter `http:
 ---
 
 ## 4. Lagesensor anschließen (Wasserwaage und Bewegungsalarm)
+
+**Am einfachsten: USB-Sensor WitMotion WT61C-USB-TTL** (Variante „TTL“ mit USB-Kabel, *nicht* „232“ oder „485“).
+Sensor flach und fest im Fahrzeug anschrauben, USB-Kabel in den Pi stecken – fertig. Die Zentrale erkennt ihn
+innerhalb von 15 Sekunden von selbst. Danach auf ebenem Platz unter **Niveau → Kalibrieren** drücken.
+
+**Alternativ: MPU-6050 an der Stiftleiste:**
 
 | MPU-6050 | Raspberry Pi (Stiftleiste) |
 |---|---|

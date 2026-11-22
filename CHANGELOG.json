@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.4.0",
+    "date": "2026-11-22",
+    "changes": [
+      "Wasserwaage: USB-Neigungssensoren von WitMotion (z. B. WT61C-USB-TTL) werden unterstützt – einfach einstecken, wird automatisch erkannt",
+      "Lagesensor kann jetzt auch im laufenden Betrieb eingesteckt werden (Suche alle 15 Sekunden)",
+      "Kalibrieren wirkt sofort"
+    ]
+  },
+  {
     "version": "1.3.3",
     "date": "2026-11-22",
     "changes": [

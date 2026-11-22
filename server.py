@@ -392,50 +392,181 @@ def load_level_cal():
         return {"roll": 0.0, "pitch": 0.0}
 
 
-async def level_loop():
-    lc = CFG.get("level", {})
-    if not lc.get("enabled", True):
-        return
-    try:
+class I2CLevel:
+    """MPU-6050 an den Pi-Stiften (I2C)."""
+    name = "MPU-6050 (I2C)"
+
+    def __init__(self, lc):
         try:
             from smbus2 import SMBus
         except ImportError:
             from smbus import SMBus
-        bus = SMBus(int(lc.get("i2c_bus", 1)))
-        addr = int(str(lc.get("address", "0x68")), 16)
-        bus.write_byte_data(addr, 0x6B, 0)      # aufwecken
-        bus.write_byte_data(addr, 0x1A, 6)      # Tiefpass 5 Hz
-    except Exception as e:
-        log.info("Kein Lagesensor gefunden (%s) – Wasserwaage aus", e)
-        state["level"] = {"ok": False}
-        return
-    cal = load_level_cal()
-    roll_f = pitch_f = None
-    n = 0
-    while True:
+        self.bus = SMBus(int(lc.get("i2c_bus", 1)))
+        self.addr = int(str(lc.get("address", "0x68")), 16)
+        self.bus.write_byte_data(self.addr, 0x6B, 0)      # aufwecken
+        self.bus.write_byte_data(self.addr, 0x1A, 6)      # Tiefpass 5 Hz
+
+    async def read(self):
+        d = self.bus.read_i2c_block_data(self.addr, 0x3B, 6)
+        return [((d[i] << 8 | d[i + 1]) ^ 0x8000) - 0x8000 for i in (0, 2, 4)]
+
+    def close(self):
         try:
-            d = bus.read_i2c_block_data(addr, 0x3B, 6)
-            ax, ay, az = [((d[i] << 8 | d[i + 1]) ^ 0x8000) - 0x8000 for i in (0, 2, 4)]
-            if lc.get("swap_axes"):
-                ax, ay = ay, ax
-            roll = math.degrees(math.atan2(ay, az))
-            pitch = math.degrees(math.atan2(-ax, math.hypot(ay, az)))
-            if lc.get("invert_roll"):
-                roll = -roll
-            if lc.get("invert_pitch"):
-                pitch = -pitch
-            roll_f = roll if roll_f is None else roll_f + (roll - roll_f) * .15
-            pitch_f = pitch if pitch_f is None else pitch_f + (pitch - pitch_f) * .15
-            state["level"] = {"ok": True, "roll_raw": roll_f, "pitch_raw": pitch_f,
-                              "roll": roll_f - cal["roll"], "pitch": pitch_f - cal["pitch"]}
-            await guard_check(roll_f, pitch_f)
-            n += 1
-            if n % 4 == 0:
-                await broadcast({"type": "level", "level": state["level"]})
+            self.bus.close()
+        except Exception:
+            pass
+
+
+class WitLevel:
+    """WitMotion-Neigungssensor (z. B. WT61C/WT901C, TTL mit USB-Kabel) an USB."""
+    BAUDS = (115200, 9600, 230400, 921600)
+
+    def __init__(self, dev):
+        import termios
+        self.dev, self.buf, self.acc = dev, b"", None
+        self.fd = os.open(dev, os.O_RDONLY | os.O_NOCTTY | os.O_NONBLOCK)
+        self.termios = termios
+        self.name = f"WitMotion (USB {os.path.basename(dev)})"
+
+    def set_baud(self, baud):
+        t = self.termios
+        a = t.tcgetattr(self.fd)
+        a[0] = 0; a[1] = 0; a[3] = 0                       # roh: keine Umwandlungen
+        a[2] = t.CS8 | t.CREAD | t.CLOCAL
+        sp = getattr(t, f"B{baud}")
+        a[4] = a[5] = sp
+        t.tcsetattr(self.fd, t.TCSANOW, a)
+        t.tcflush(self.fd, t.TCIFLUSH)
+        self.buf = b""
+
+    def _pump(self):
+        try:
+            while True:
+                chunk = os.read(self.fd, 512)
+                if not chunk:
+                    break
+                self.buf += chunk
+        except BlockingIOError:
+            pass
+        found = False
+        b = self.buf
+        while len(b) >= 11:
+            if b[0] != 0x55:
+                b = b[1:]
+                continue
+            pkt = b[:11]
+            if sum(pkt[:10]) & 0xFF != pkt[10]:
+                b = b[1:]
+                continue
+            if pkt[1] == 0x51:                             # Beschleunigung
+                self.acc = [int.from_bytes(pkt[i:i + 2], "little", signed=True) for i in (2, 4, 6)]
+                found = True
+            b = b[11:]
+        self.buf = b[-64:] if len(b) > 64 else b
+        return found
+
+    async def detect(self):
+        for baud in self.BAUDS:
+            self.set_baud(baud)
+            for _ in range(15):
+                await asyncio.sleep(.1)
+                if self._pump():
+                    log.info("WitMotion-Sensor an %s mit %d Baud", self.dev, baud)
+                    return True
+        return False
+
+    async def read(self):
+        for _ in range(20):
+            if self._pump():
+                break
+            await asyncio.sleep(.02)
+        if self.acc is None:
+            raise IOError("keine Daten vom USB-Sensor")
+        return self.acc
+
+    def close(self):
+        try:
+            os.close(self.fd)
+        except Exception:
+            pass
+
+
+LEVEL_CAL = {"roll": 0.0, "pitch": 0.0}
+
+
+async def find_level_sensor(lc):
+    """Erst I2C (MPU-6050) probieren, dann USB-Sensoren (WitMotion)."""
+    want = str(lc.get("sensor", "auto")).lower()
+    if want in ("auto", "i2c", "mpu6050"):
+        try:
+            return I2CLevel(lc)
         except Exception as e:
-            log.warning("Lagesensor: %s", e)
-            await asyncio.sleep(2)
-        await asyncio.sleep(.05)
+            if want != "auto":
+                log.info("Kein I2C-Lagesensor: %s", e)
+    if want in ("auto", "usb", "witmotion"):
+        devs = [lc["usb_device"]] if lc.get("usb_device") else \
+            sorted(glob.glob("/dev/ttyUSB*")) + sorted(glob.glob("/dev/ttyACM*"))
+        for dev in devs:
+            try:
+                w = WitLevel(dev)
+            except Exception as e:
+                log.info("USB %s nicht lesbar: %s", dev, e)
+                continue
+            if await w.detect():
+                return w
+            w.close()
+    return None
+
+
+async def level_loop():
+    lc = CFG.get("level", {})
+    if not lc.get("enabled", True):
+        return
+    cal = LEVEL_CAL
+    cal.update(load_level_cal())
+    told = False
+    while True:
+        sensor = await find_level_sensor(lc)
+        if not sensor:
+            if not told:
+                log.info("Kein Lagesensor gefunden – Wasserwaage aus (suche alle 15 s weiter, USB oder I2C)")
+                told = True
+            state["level"] = {"ok": False}
+            await asyncio.sleep(15)
+            continue
+        log.info("Lagesensor gefunden: %s", sensor.name)
+        told = False
+        roll_f = pitch_f = None
+        n = errors = 0
+        while errors < 10:
+            try:
+                ax, ay, az = await sensor.read()
+                errors = 0
+                if lc.get("swap_axes"):
+                    ax, ay = ay, ax
+                roll = math.degrees(math.atan2(ay, az))
+                pitch = math.degrees(math.atan2(-ax, math.hypot(ay, az)))
+                if lc.get("invert_roll"):
+                    roll = -roll
+                if lc.get("invert_pitch"):
+                    pitch = -pitch
+                roll_f = roll if roll_f is None else roll_f + (roll - roll_f) * .15
+                pitch_f = pitch if pitch_f is None else pitch_f + (pitch - pitch_f) * .15
+                state["level"] = {"ok": True, "sensor": sensor.name, "roll_raw": roll_f, "pitch_raw": pitch_f,
+                                  "roll": roll_f - cal["roll"], "pitch": pitch_f - cal["pitch"]}
+                await guard_check(roll_f, pitch_f)
+                n += 1
+                if n % 4 == 0:
+                    await broadcast({"type": "level", "level": state["level"]})
+            except Exception as e:
+                errors += 1
+                log.warning("Lagesensor: %s", e)
+                await asyncio.sleep(1)
+            await asyncio.sleep(.05)
+        log.warning("Lagesensor %s antwortet nicht mehr – suche neu", sensor.name)
+        sensor.close()
+        state["level"] = {"ok": False}
+        await broadcast({"type": "level", "level": state["level"]})
 
 
 # ---------------------------------------------------------------------------
@@ -496,7 +627,9 @@ async def guard_check(roll, pitch):
 def level_calibrate():
     lv = state.get("level") or {}
     if lv.get("ok"):
-        LEVEL_FILE.write_text(json.dumps({"roll": lv["roll_raw"], "pitch": lv["pitch_raw"]}))
+        c = {"roll": lv["roll_raw"], "pitch": lv["pitch_raw"]}
+        LEVEL_FILE.write_text(json.dumps(c))
+        LEVEL_CAL.update(c)
         log.info("Wasserwaage kalibriert")
 
 
