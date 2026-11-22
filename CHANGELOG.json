@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.5.8",
+    "date": "2026-11-22",
+    "changes": [
+      "Kameras von zu Hause: Reolink-Kameras über Home Assistant – unterwegs überall sichtbar",
+      "Kamera-Seite getrennt nach „Im Womo“ und „Zuhause“",
+      "Kamerabild antippen: Vollbild mit Live-Aktualisierung jede Sekunde"
+    ]
+  },
+  {
     "version": "1.5.7",
     "date": "2026-11-22",
     "changes": [

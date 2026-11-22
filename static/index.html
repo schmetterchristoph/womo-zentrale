@@ -2060,6 +2060,7 @@ function exEnter(){
   if (EXTAB === "warn") send({type: "warn_cfg"});
   if (EXTAB === "sprache") send({type: "voice_get"});
   if (EXTAB === "sensoren" || EXTAB === "kamera") { send({type: "sens_get"}); CAM_T = 0; }
+  if (EXTAB === "kamera" && SNS && SNS.ha_token && !HA_RES) send({type: "ha_check"});
   schedule(true);
 }
 
@@ -2134,15 +2135,33 @@ function exSkeleton(){
     <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0"><h3>Gefundene Bluetooth-Sensoren · antippen zum Zuordnen</h3>
       <div class="scroll" data-keep="snf" style="flex:1;min-height:0"><div id="snFound"></div></div></div>
   </div></div>
-  <div class="exPane" id="ex-kamera"><div class="grid" style="grid-template-columns:1fr 330px;height:100%">
-    <div class="scroll" data-keep="cam" style="min-height:0"><div class="grid" id="camGrid" style="grid-template-columns:1fr 1fr"></div></div>
-    <div class="card scroll"><h3>Reolink-Kamera hinzufügen</h3>
-      <input type="text" id="camName" placeholder="Name, z. B. Rückfahrkamera">
-      <input type="text" id="camHost" placeholder="IP-Adresse, z. B. 192.168.8.60" style="margin-top:8px">
-      <input type="text" id="camUser" placeholder="Benutzer (meist admin)" style="margin-top:8px">
-      <input type="password" id="camPass" placeholder="Passwort der Kamera" style="margin-top:8px;width:100%;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:17px;padding:0 14px">
-      <button class="btn sel" style="width:100%;margin-top:10px" data-tap="camadd">Hinzufügen</button>
-      <div class="hint" style="margin-top:8px">Das Bild wird über den Pi geholt – das Passwort bleibt auf dem Pi. Aktualisiert sich alle 2 Sekunden.</div></div>
+  <div class="exPane" id="ex-kamera"><div class="grid" style="grid-template-columns:1fr 360px;height:100%">
+    <div style="display:flex;flex-direction:column;min-height:0;gap:10px">
+      <div class="row" id="camGroups" style="gap:8px"></div>
+      <div class="scroll" data-keep="cam" style="flex:1;min-height:0"><div class="grid" id="camGrid" style="grid-template-columns:1fr 1fr"></div></div></div>
+    <div class="card scroll" data-keep="camf" style="min-height:0">
+      <div class="row" id="camSrcTabs" style="gap:6px;margin-bottom:10px"></div>
+      <div id="camHA">
+        <div class="hint" style="font-size:14px;line-height:1.45;margin-bottom:8px">Kameras von zu Hause über dein <b>Home Assistant</b> – funktioniert überall, wo der Pi Internet hat.</div>
+        <input type="text" id="haUrl" placeholder="Adresse, z. B. https://xxxx.ui.nabu.casa">
+        <input type="password" id="haTok" placeholder="Langzeit-Zugangstoken" style="margin-top:8px;width:100%;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:17px;padding:0 14px">
+        <button class="btn sel" style="width:100%;margin-top:10px" data-tap="haset">Verbinden</button>
+        <div id="haRes" style="margin-top:10px"></div>
+        <details style="margin-top:10px"><summary class="hint" style="font-size:14px;cursor:pointer">So bekommst du Adresse und Token</summary>
+          <div class="hint" style="font-size:13px;line-height:1.5;margin-top:6px"><b>Adresse:</b> die Internet-Adresse deines Home Assistant (z. B. Nabu Casa: Einstellungen → Home Assistant Cloud → Fernsteuerung).<br>
+          <b>Token:</b> Home Assistant → unten links auf deinen Namen → Reiter „Sicherheit“ → ganz unten „Langlebige Zugriffstoken“ → „Token erstellen“, Name „Womo“.<br>
+          <b>Tipp:</b> Das lange Token tippt man schlecht ab. Öffne die Zentrale auf dem Handy (Extras → Handy) und füge es dort ein.</div></details>
+      </div>
+      <div id="camRL">
+        <input type="text" id="camName" placeholder="Name, z. B. Rückfahrkamera">
+        <input type="text" id="camHost" placeholder="IP-Adresse, z. B. 192.168.8.60" style="margin-top:8px">
+        <input type="text" id="camUser" placeholder="Benutzer (meist admin)" style="margin-top:8px">
+        <input type="password" id="camPass" placeholder="Passwort der Kamera" style="margin-top:8px;width:100%;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:17px;padding:0 14px">
+        <div class="row" id="camGrpSel" style="gap:6px;margin-top:8px"></div>
+        <button class="btn sel" style="width:100%;margin-top:10px" data-tap="camadd">Hinzufügen</button>
+        <div class="hint" style="margin-top:8px;font-size:13px">Direkt per IP: für Kameras im Womo-WLAN – oder für Kameras zu Hause, wenn der Pi per Tailscale mit deinem Heimnetz verbunden ist.</div>
+      </div>
+    </div>
   </div></div>
   <div class="exPane" id="ex-sprache"><div class="grid" style="grid-template-columns:1fr 1fr;height:100%">
     <div class="grid" style="align-content:start"><div class="card" id="vcCard"></div>
@@ -2161,7 +2180,7 @@ function updExtras(){
   const pg = document.getElementById("pg-extras");
   if (!document.getElementById("exTabs")) {
     pg.innerHTML = exSkeleton();
-    for (const [id, fn] of [["chkNew", exAddCheck], ["mtNew", exAddMaint], ["vcText", vcTry]])
+    for (const [id, fn] of [["chkNew", exAddCheck], ["mtNew", exAddMaint], ["vcText", vcTry], ["haTok", haSet]])
       document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") fn(); });
     mapBind();
   }
@@ -2821,7 +2840,7 @@ function exSprache(){
 // ===========================================================================
 let SNS = null, SNS_PICK = null, CAM_T = 0;
 const ROLE_KIND = r => r.startsWith("gas") ? "mopeka" : r.startsWith("tpms") ? "tpms" : "bthome";
-function snMessage(m){ if (m.type !== "sensors") return false; SNS = m; return true; }
+function snMessage(m){ if (camMessage(m)) return true; if (m.type !== "sensors") return false; SNS = m; return true; }
 function snAction(cmd, p){
   if (cmd === "snpick") { SNS_PICK = SNS_PICK === p[0] ? null : p[0]; return true; }
   if (cmd === "snrole") { send({type: "sens_assign", address: p[0], role: p[1]}); SNS_PICK = null; return true; }
@@ -2830,6 +2849,7 @@ function snAction(cmd, p){
   if (cmd === "tpmsnom") { send({type: "tpms_nominal"}); return true; }
   if (cmd === "tpmsmin") { send({type: "tpms_min", delta: Number(p[0])}); return true; }
   if (cmd === "camadd") { camAdd(); return true; }
+  if (camAction(cmd, p)) return true;
   if (cmd === "camdel") { send({type: "cam_del", id: p[0]}); return true; }
   return false;
 }
@@ -2898,25 +2918,73 @@ function exSensoren(){
     : `<div class="hint">Noch nichts gefunden. Der Pi hört alle 30 Sekunden nach Bluetooth-Sensoren in der Nähe.</div>`);
 }
 
+let CAM_GROUP = "womo", CAM_SRC = "ha", CAM_NEWGRP = "womo", HA_RES = null, CAM_BIG = null, camBigTimer = null;
 function camAdd(){
   const g = id => document.getElementById(id).value.trim();
   if (!g("camHost")) return;
-  send({type: "cam_add", name: g("camName") || "Kamera", host: g("camHost"), user: g("camUser") || "admin", password: document.getElementById("camPass").value});
+  send({type: "cam_add", src: "reolink", group: CAM_NEWGRP, name: g("camName") || "Kamera", host: g("camHost"), user: g("camUser") || "admin", password: document.getElementById("camPass").value});
   for (const id of ["camName", "camHost", "camUser", "camPass"]) document.getElementById(id).value = "";
-  oskHide();
+  oskHide(); CAM_GROUP = CAM_NEWGRP; CAM_T = 0;
 }
+function haSet(){
+  const u = document.getElementById("haUrl").value.trim(), t = document.getElementById("haTok").value.trim();
+  HA_RES = {busy: true}; send({type: "ha_set", url: u, token: t}); document.getElementById("haTok").value = ""; oskHide(); schedule();
+}
+function camAction(cmd, p){
+  if (cmd === "camgrp") { CAM_GROUP = p[0]; CAM_T = 0; return true; }
+  if (cmd === "camsrc") { CAM_SRC = p[0]; return true; }
+  if (cmd === "camnewgrp") { CAM_NEWGRP = p[0]; return true; }
+  if (cmd === "haset") { haSet(); return true; }
+  if (cmd === "haadd") { const c = HA_RES && HA_RES.list && HA_RES.list[Number(p[0])]; if (c) { send({type: "cam_add", src: "ha", entity: c.entity, name: c.name}); CAM_GROUP = "zuhause"; CAM_T = 0; } return true; }
+  if (cmd === "cambig") { CAM_BIG = p[0] === "close" ? null : p[0]; camBigDraw(); return true; }
+  return false;
+}
+function camMessage(m){ if (m.type !== "ha_cams") return false; HA_RES = m; return true; }
+function camImg(c, t){ return DEMO ? "" : `<img src="/cam/${c.id}.jpg?t=${t}" alt="" onerror="this.style.display='none'" onload="this.style.display=''" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`; }
 function exKamera(){
-  const cams = SNS ? SNS.cams : [];
+  const all = SNS ? SNS.cams : [];
+  const cams = all.filter(c => (c.group || "womo") === CAM_GROUP);
+  html("camGroups", [["womo", "🚐 Im Womo"], ["zuhause", "🏠 Zuhause"]].map(([g, t]) =>
+    `<button class="tab ${CAM_GROUP === g ? "on" : ""}" data-tap="camgrp|${g}">${t} <span class="mute" style="font-weight:500">${all.filter(c => (c.group || "womo") === g).length}</span></button>`).join(""));
   const now = Date.now();
   if (now - CAM_T > 1800) {
     CAM_T = now;
-    html("camGrid", cams.length ? cams.map(c => `<div class="card" style="padding:10px"><div class="row" style="justify-content:space-between;margin-bottom:6px"><b>${esc(c.name)}</b>
-        <button class="iconBtn" data-hold="camdel|${c.id}"><i class="fill"></i>🗑</button></div>
-        <div style="position:relative;width:100%;aspect-ratio:16/9;border-radius:10px;background:#0c1620;overflow:hidden;display:flex;align-items:center;justify-content:center">
-          <span class="hint">Kein Bild – ist die Kamera im WLAN erreichbar?</span>
-          ${DEMO ? "" : `<img src="/cam/${c.id}.jpg?t=${now}" alt="" onerror="this.style.display='none'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`}</div></div>`).join("")
-      : `<div class="empty">Noch keine Kamera eingetragen.</div>`);
+    html("camGrid", cams.length ? cams.map(c => `<div class="card" style="padding:10px"><div class="row" style="justify-content:space-between;margin-bottom:6px">
+        <b>${esc(c.name)}</b><span class="row" style="gap:6px"><span class="hint">${c.src === "ha" ? "Home Assistant" : esc(c.host)}</span>
+        <button class="iconBtn" data-hold="camdel|${c.id}"><i class="fill"></i>🗑</button></span></div>
+        <div data-tap="cambig|${c.id}" style="position:relative;width:100%;aspect-ratio:16/9;border-radius:10px;background:#0c1620;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <span class="hint" style="padding:10px;text-align:center">Kein Bild – ${c.src === "ha" ? "Home Assistant erreichbar?" : "Kamera im WLAN erreichbar?"}</span>${camImg(c, now)}</div></div>`).join("")
+      : `<div class="empty">${CAM_GROUP === "zuhause" ? "Noch keine Kamera von zu Hause – rechts über Home Assistant verbinden." : "Noch keine Kamera im Womo eingetragen."}</div>`);
   }
+  html("camSrcTabs", [["ha", "Home Assistant"], ["rl", "Reolink direkt"]].map(([k, t]) => `<button class="btn sm ${CAM_SRC === k ? "sel" : ""}" style="flex:1" data-tap="camsrc|${k}">${t}</button>`).join(""));
+  document.getElementById("camHA").style.display = CAM_SRC === "ha" ? "" : "none";
+  document.getElementById("camRL").style.display = CAM_SRC === "rl" ? "" : "none";
+  const hu = document.getElementById("haUrl");
+  if (SNS && SNS.ha_url && !hu.value && document.activeElement !== hu) hu.value = SNS.ha_url;
+  document.getElementById("haTok").placeholder = SNS && SNS.ha_token ? "Token ist gespeichert ✓ (nur zum Ändern)" : "Langzeit-Zugangstoken";
+  const used = new Set(all.map(c => c.entity));
+  html("haRes", !HA_RES ? (SNS && SNS.ha_token ? `<button class="btn sm" style="width:100%" data-tap="haset">Kameras von Home Assistant laden</button>` : "")
+    : HA_RES.busy ? `<div class="mute">Verbinde ...</div>`
+    : `<div class="hint" style="color:${HA_RES.ok ? "var(--green)" : "var(--red)"};margin-bottom:6px">${esc(HA_RES.msg)}</div>` +
+      (HA_RES.list || []).map((c, i) => `<button class="btn locRes ${used.has(c.entity) ? "sel" : ""}" ${used.has(c.entity) ? "" : `data-tap="haadd|${i}"`}>
+        ${used.has(c.entity) ? "✓" : "+"} <b>${esc(c.name)}</b> <span class="mute" style="font-size:13px">${esc(c.entity)}</span></button>`).join(""));
+  html("camGrpSel", [["womo", "Im Womo"], ["zuhause", "Zuhause"]].map(([g, t]) => `<button class="btn sm ${CAM_NEWGRP === g ? "sel" : ""}" style="flex:1" data-tap="camnewgrp|${g}">${t}</button>`).join(""));
+}
+function camBigDraw(){
+  let el = document.getElementById("camBig");
+  if (!el) {
+    document.getElementById("stage").insertAdjacentHTML("beforeend", `<div id="camBig" data-tap="cambig|close" style="position:absolute;inset:0;background:#000;z-index:60;display:none;align-items:center;justify-content:center;cursor:pointer">
+      <img id="camBigImg" alt="" style="max-width:100%;max-height:100%;object-fit:contain"><div id="camBigT" style="position:absolute;left:20px;top:16px;font-size:22px;font-weight:700;text-shadow:0 2px 6px #000"></div>
+      <div class="hint" style="position:absolute;right:20px;top:20px;font-size:16px">Antippen zum Schließen</div></div>`);
+    el = document.getElementById("camBig");
+  }
+  clearInterval(camBigTimer);
+  el.style.display = CAM_BIG ? "flex" : "none";
+  if (!CAM_BIG) return;
+  const c = SNS && SNS.cams.find(x => x.id === CAM_BIG);
+  txt("camBigT", c ? c.name : "");
+  const load = () => { const im = document.getElementById("camBigImg"); if (!DEMO) im.src = `/cam/${CAM_BIG}.jpg?t=${Date.now()}`; sleepReset(); };
+  load(); camBigTimer = setInterval(load, 1000);
 }
 
 // Nachtmodus automatisch (Sonnenuntergang bis Sonnenaufgang)
@@ -3040,7 +3108,8 @@ function startDemo(){
       {address: "T3", kind: "tpms", role: "tpms_hl", rssi: -74, data: {bar: 5.5, temperature: 11}}, {address: "T4", kind: "tpms", role: "tpms_hr", rssi: -75, data: {bar: 4.6, temperature: 11}},
       {address: "B1", kind: "bthome", role: "door_entry", rssi: -55, data: {battery: 96, window: 0}}, {address: "B2", kind: "bthome", role: "win_roof1", rssi: -58, data: {battery: 91, window: 1}},
       {address: "B3", kind: "bthome", role: "leak1", rssi: -60, data: {battery: 88, moisture: 0}}, {address: "7C:C6:B6:61:A2:01", kind: "bthome", role: null, name: "SBDW-002C", rssi: -64, data: {battery: 100, window: 0}}],
-    tpms_min_bar: 3.5, tpms_nominal: {tpms_vl: 5.0, tpms_vr: 5.0, tpms_hl: 5.5, tpms_hr: 5.5}, gas_full_mm: 380, cams: [{id: "c1", name: "Rückfahrkamera", host: "192.168.8.60"}]};
+    tpms_min_bar: 3.5, tpms_nominal: {tpms_vl: 5.0, tpms_vr: 5.0, tpms_hl: 5.5, tpms_hr: 5.5}, gas_full_mm: 380, cams: [{id: "c1", name: "Rückfahrkamera", host: "192.168.8.60", src: "reolink", group: "womo"},
+      {id: "h1", name: "Einfahrt", src: "ha", group: "zuhause", entity: "camera.einfahrt"}, {id: "h2", name: "Garten", src: "ha", group: "zuhause", entity: "camera.garten"}], ha_url: "https://beispiel.ui.nabu.casa", ha_token: true};
   VC = {enabled: true, state: "bereit", status: "Hört zu über plughw:CARD=ArrayUAC10,DEV=0", vosk: true, piper: true, espeak: false, mic: "reSpeaker XVF3800", wake: ["zentrale", "computer"], speak: true, heard: "licht im bad an", reply: "Bad an."};
   VC_STATE = "bereit"; vcDraw();
   schedule(true);
@@ -3063,6 +3132,8 @@ function demoCommand(m){
   if (m.type === "voice_text") { vcMessage({type: "voice_event", heard: m.text, reply: "(Demo) Befehl verstanden."}); return; }
   if ((m.type || "").startsWith("voice")) return;
   if (m.type === "sens_assign") { const f = SNS.found.find(x => x.address === m.address); if (f) f.role = m.role; SNS.devices = SNS.devices.filter(d => d.role !== m.role).concat([{address: m.address, role: m.role}]); return; }
+  if (m.type === "ha_set" || m.type === "ha_check") { setTimeout(() => { camMessage({type: "ha_cams", ok: true, msg: "Verbunden – 4 Kameras gefunden", list: [
+    {entity: "camera.einfahrt", name: "Einfahrt"}, {entity: "camera.garten", name: "Garten"}, {entity: "camera.garage", name: "Garage"}, {entity: "camera.haustuer", name: "Haustür"}]}); schedule(); }, 700); return; }
   if (["sens_get", "gas_full", "tpms_nominal", "tpms_min", "cam_add", "cam_del", "sens_unassign"].includes(m.type)) return;
   if (m.type === "ac_set") { for (const k in m) if (k !== "type") AC[k] = m[k]; return; }
   if (m.type === "guard") { GUARD.armed = m.armed; GUARD.triggered = false; return; }

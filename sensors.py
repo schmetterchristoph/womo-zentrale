@@ -44,7 +44,8 @@ def cfg():
     c.setdefault("tpms_min_bar", 3.5)
     c.setdefault("tpms_drop_bar", 0.4)
     c.setdefault("tpms_nominal", {})
-    c.setdefault("cameras", [])            # [{"id","name","host","user","password","channel"}]
+    c.setdefault("cameras", [])            # [{"id","name","src":"reolink"|"ha","group":"womo"|"zuhause", ...}]
+    c.setdefault("ha", {"url": "", "token": ""})   # Home Assistant zu Hause (für Kameras von unterwegs)
     return c
 
 
@@ -232,10 +233,46 @@ def checks(active):
 # ---------------------------------------------------------------------------
 # Kameras (Reolink)
 # ---------------------------------------------------------------------------
+def ha_base():
+    h = cfg()["ha"]
+    return (h.get("url") or "").strip().rstrip("/"), (h.get("token") or "").strip()
+
+
+async def ha_get(path, raw=False, timeout=10):
+    url, tok = ha_base()
+    if not url or not tok:
+        raise IOError("Home Assistant nicht eingerichtet")
+    async with aiohttp.ClientSession() as s:
+        async with s.get(url + path, headers={"Authorization": f"Bearer {tok}"},
+                         timeout=aiohttp.ClientTimeout(total=timeout)) as r:
+            if r.status == 401:
+                raise IOError("Zugangs-Token ungültig")
+            if r.status != 200:
+                raise IOError(f"HTTP {r.status}")
+            return await (r.read() if raw else r.json(content_type=None))
+
+
+async def ha_cameras():
+    states = await ha_get("/api/states")
+    out = []
+    for e in states:
+        eid = e.get("entity_id", "")
+        if eid.startswith("camera."):
+            out.append({"entity": eid, "name": (e.get("attributes") or {}).get("friendly_name") or eid,
+                        "state": e.get("state")})
+    return sorted(out, key=lambda x: x["name"].lower())
+
+
 async def camera_jpeg(cid):
     cam = next((c for c in cfg()["cameras"] if c["id"] == cid), None)
     if not cam:
         return None, "unbekannt"
+    if cam.get("src") == "ha":
+        try:
+            body = await ha_get(f"/api/camera_proxy/{cam['entity']}", raw=True, timeout=12)
+            return (body, None) if body[:2] == b"\xff\xd8" or body[:4] == b"\x89PNG" else (None, "Kein Bild von Home Assistant")
+        except Exception as e:
+            return None, f"Home Assistant: {e}"
     url = (f"http://{cam['host']}/cgi-bin/api.cgi?cmd=Snap&channel={int(cam.get('channel') or 0)}&rs={uuid.uuid4().hex[:8]}"
            f"&user={cam.get('user') or 'admin'}&password={cam.get('password') or ''}")
     try:
@@ -250,7 +287,8 @@ async def camera_jpeg(cid):
 
 
 def cams_public():
-    return [{"id": c["id"], "name": c["name"], "host": c["host"], "user": c.get("user", "admin"), "channel": c.get("channel", 0)}
+    return [{"id": c["id"], "name": c["name"], "src": c.get("src", "reolink"), "group": c.get("group", "womo"),
+             "host": c.get("host", ""), "entity": c.get("entity", ""), "channel": c.get("channel", 0)}
             for c in cfg()["cameras"]]
 
 
@@ -268,6 +306,7 @@ def sensors_msg():
     c = cfg()
     return {"type": "sensors", "found": found, "roles": ROLES, "devices": c["devices"], "gas_full_mm": c["gas_full_mm"],
             "tpms_min_bar": c["tpms_min_bar"], "tpms_nominal": c["tpms_nominal"], "cams": cams_public(),
+            "ha_url": cfg()["ha"].get("url", ""), "ha_token": bool(cfg()["ha"].get("token")),
             "ble": S.get("BleakScanner") is not None}
 
 
@@ -293,10 +332,28 @@ async def handle(cmd, ws):
     elif t == "tpms_min":
         c["tpms_min_bar"] = max(1.0, min(8.0, float(c["tpms_min_bar"]) + float(cmd.get("delta", 0))))
     elif t == "cam_add":
-        if str(cmd.get("host", "")).strip():
-            c["cameras"].append({"id": uuid.uuid4().hex[:6], "name": str(cmd.get("name") or "Kamera")[:30],
-                                 "host": str(cmd["host"]).strip()[:60], "user": str(cmd.get("user") or "admin")[:30],
+        group = "zuhause" if cmd.get("group") == "zuhause" else "womo"
+        if cmd.get("src") == "ha" and str(cmd.get("entity", "")).startswith("camera."):
+            if not any(x.get("entity") == cmd["entity"] for x in c["cameras"]):
+                c["cameras"].append({"id": uuid.uuid4().hex[:6], "name": str(cmd.get("name") or cmd["entity"])[:40],
+                                     "src": "ha", "entity": cmd["entity"], "group": "zuhause"})
+        elif str(cmd.get("host", "")).strip():
+            c["cameras"].append({"id": uuid.uuid4().hex[:6], "name": str(cmd.get("name") or "Kamera")[:30], "src": "reolink",
+                                 "group": group, "host": str(cmd["host"]).strip()[:60], "user": str(cmd.get("user") or "admin")[:30],
                                  "password": str(cmd.get("password") or "")[:60], "channel": int(cmd.get("channel") or 0)})
+    elif t == "ha_set":
+        url = str(cmd.get("url", "")).strip().rstrip("/")
+        if url and not url.startswith("http"):
+            url = "https://" + url
+        if url:
+            c["ha"]["url"] = url[:200]
+        if str(cmd.get("token", "")).strip():
+            c["ha"]["token"] = str(cmd["token"]).strip()[:600]
+        S["save_config"]()
+        await ha_check(ws)
+    elif t == "ha_check":
+        await ha_check(ws)
+        return True
     elif t == "cam_del":
         c["cameras"] = [x for x in c["cameras"] if x["id"] != cmd.get("id")]
     else:
@@ -304,6 +361,16 @@ async def handle(cmd, ws):
     S["save_config"]()
     await S["broadcast"](sensors_msg())
     return True
+
+
+async def ha_check(ws):
+    try:
+        cams = await ha_cameras()
+        msg = {"type": "ha_cams", "ok": True, "list": cams,
+               "msg": f"Verbunden – {len(cams)} Kamera{'s' if len(cams) != 1 else ''} gefunden"}
+    except Exception as e:
+        msg = {"type": "ha_cams", "ok": False, "list": [], "msg": f"Keine Verbindung: {e}"}
+    await ws.send_str(json.dumps(msg))
 
 
 async def cam_route(request):
