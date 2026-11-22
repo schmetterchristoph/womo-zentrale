@@ -167,6 +167,18 @@ input[type=range]{width:100%;height:40px;accent-color:var(--blue)}
 .lgScene.cfg{flex:none;width:96px;font-size:14px;color:var(--mute)}
 #lgRange{accent-color:#ffc233}
 #lgSetup{position:absolute;inset:0;background:rgba(3,10,18,.9);display:none;align-items:center;justify-content:center;z-index:44}
+/* Sprache */
+#vcBtn{position:absolute;right:18px;bottom:16px;width:70px;height:70px;border-radius:50%;border:2px solid rgba(127,232,255,.6);z-index:42;
+  background:radial-gradient(circle at 35% 30%,#2a6fb0,#0f3358);color:#fff;display:none;align-items:center;justify-content:center;cursor:pointer;padding:0;
+  box-shadow:0 0 18px rgba(59,163,255,.45),0 6px 16px rgba(0,0,0,.5)}
+#vcBtn.listen{background:radial-gradient(circle at 35% 30%,#ff6b7a,#b3132a);border-color:#ffb3bd;animation:vcPulse 1s ease-in-out infinite}
+#vcBtn.think{background:radial-gradient(circle at 35% 30%,#ffd76a,#d38b00);border-color:#ffe39a}
+@keyframes vcPulse{50%{box-shadow:0 0 0 14px rgba(255,77,94,.25),0 0 30px rgba(255,77,94,.7)}}
+#stage.full #vcBtn{right:auto;left:106px}
+#stage.full #vcToast{right:auto;left:188px}
+#vcToast{position:absolute;right:100px;bottom:20px;max-width:560px;z-index:42;display:none;background:rgba(8,16,26,.95);border:1px solid rgba(127,232,255,.45);
+  border-radius:16px;padding:12px 18px;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.vcH{font-size:15px;color:var(--mute);margin-bottom:3px}.vcR{font-size:20px;font-weight:650}
 /* Extras-Seite */
 .tabs{display:flex;gap:8px;margin-bottom:14px}
 .tab{height:46px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:#b4c2d2;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px}
@@ -301,7 +313,7 @@ function connect(){
   ws.onopen = () => { opened = true; };
   ws.onmessage = ev => {
     const m = JSON.parse(ev.data);
-    if (exMessage(m) || lgMessage(m)) {}
+    if (exMessage(m) || lgMessage(m) || vcMessage(m)) {}
     else if (m.type === "snapshot") { for (const k in V) delete V[k]; Object.assign(V, m.values); }
     else if (m.type === "delta") Object.assign(V, m.values);
     else if (m.type === "status") {
@@ -356,7 +368,7 @@ document.addEventListener("click", e => {
 });
 function runAction(a){
   const [cmd, ...p] = a.split("|");
-  if (exAction(cmd, p) || lgAction(cmd, p)) { schedule(); return; }
+  if (exAction(cmd, p) || lgAction(cmd, p) || vcAction(cmd, p)) { schedule(); return; }
   if (cmd === "w") write(p[0], Number(p[1]));
   else if (cmd === "shr") send({type:"shr", cmd:p[0]});
   else if (cmd === "limit") limitStep(Number(p[0]), p[1]);
@@ -1989,7 +2001,7 @@ let WARNS = [], FC = null, CHK = null, MAINT = null, TRIP = null, NET = null, WC
 const HISTD = {};
 let EXTAB = "abfahrt", HRANGE = "24h";
 const LOC = {open: false, busy: false, res: null, err: false, q: ""};
-const EX_TABS = [["abfahrt", "Abfahrt"], ["reise", "Reisekarte"], ["verlauf", "Verlauf"], ["wartung", "Wartung"], ["warn", "Warnungen"], ["handy", "Handy"]];
+const EX_TABS = [["abfahrt", "Abfahrt"], ["reise", "Reisekarte"], ["verlauf", "Verlauf"], ["wartung", "Wartung"], ["warn", "Warnungen"], ["sprache", "Sprache"], ["handy", "Handy"]];
 const DAYMS = 864e5;
 const dDE = t => new Date(t).toLocaleDateString("de-DE", {day: "2-digit", month: "2-digit", year: "numeric"});
 const dShort = t => new Date(t).toLocaleDateString("de-DE", {weekday: "short", day: "2-digit", month: "2-digit"});
@@ -2041,6 +2053,7 @@ function exEnter(){
   if (EXTAB === "reise") { send({type: "trip_get"}); MAP.needFit = true; }
   if (EXTAB === "handy") send({type: "net_info"});
   if (EXTAB === "warn") send({type: "warn_cfg"});
+  if (EXTAB === "sprache") send({type: "voice_get"});
   schedule(true);
 }
 
@@ -2109,6 +2122,13 @@ function exSkeleton(){
     <div class="card" style="display:flex;flex-direction:column;min-height:0"><h3>Einstellungen · Push aufs Handy</h3>
       <div class="scroll" data-keep="wc" style="flex:1;min-height:0"><div id="warnCfg"></div></div></div>
   </div></div>
+  <div class="exPane" id="ex-sprache"><div class="grid" style="grid-template-columns:1fr 1fr;height:100%">
+    <div class="grid" style="align-content:start"><div class="card" id="vcCard"></div>
+      <div class="card"><h3>Befehl ausprobieren (tippen statt sprechen)</h3>
+        <div class="row"><input type="text" id="vcText" placeholder="z. B. Licht im Bad an"><button class="btn sel" style="height:46px" data-tap="vc|try">Los</button></div>
+        <div id="vcLast" style="margin-top:10px"></div></div></div>
+    <div class="card scroll" data-keep="vch" id="vcHelp"></div>
+  </div></div>
   <div class="exPane" id="ex-handy"><div class="grid" style="grid-template-columns:1fr 1fr;height:100%">
     <div class="card" id="netCard"></div>
     <div class="card scroll" data-keep="ts"><h3>Von unterwegs (Fernzugang)</h3><div id="tsCard"></div></div>
@@ -2119,7 +2139,7 @@ function updExtras(){
   const pg = document.getElementById("pg-extras");
   if (!document.getElementById("exTabs")) {
     pg.innerHTML = exSkeleton();
-    for (const [id, fn] of [["chkNew", exAddCheck], ["mtNew", exAddMaint]])
+    for (const [id, fn] of [["chkNew", exAddCheck], ["mtNew", exAddMaint], ["vcText", vcTry]])
       document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") fn(); });
     mapBind();
   }
@@ -2127,7 +2147,7 @@ function updExtras(){
     id === "warn" && WARNS.length ? ` <b class="tabBadge">${WARNS.length}</b>` : ""}${
     id === "wartung" && MAINT && MAINT.some(x => x.left != null && x.left <= 30) ? ` <b class="tabBadge">!</b>` : ""}</button>`).join(""));
   for (const [id] of EX_TABS) { const el = document.getElementById("ex-" + id); const d = EXTAB === id ? "" : "none"; if (el.style.display !== d) el.style.display = d; }
-  ({abfahrt: exAbfahrt, reise: exReise, verlauf: exVerlauf, wartung: exWartung, warn: exWarn, handy: exHandy})[EXTAB]();
+  ({abfahrt: exAbfahrt, reise: exReise, verlauf: exVerlauf, wartung: exWartung, warn: exWarn, sprache: exSprache, handy: exHandy})[EXTAB]();
 }
 
 // ------------------------------------------------------------ Abfahrt ----
@@ -2680,6 +2700,100 @@ function demoLightsCmd(m){
   return true;
 }
 
+// ===========================================================================
+// Sprachsteuerung (Oberfläche)
+// ===========================================================================
+let VC = null, VC_STATE = "aus", VC_TOAST = null, vcToastTimer = null;
+function vcMessage(m){
+  if (m.type === "voice") { VC = m; VC_STATE = m.state; vcDraw(); }
+  else if (m.type === "voice_state") { VC_STATE = m.state; if (m.state === "hört") sleepReset(); vcDraw(); }
+  else if (m.type === "voice_event") { VC_TOAST = m; vcDraw(); clearTimeout(vcToastTimer); vcToastTimer = setTimeout(() => { VC_TOAST = null; vcDraw(); }, 8000); }
+  else if (m.type === "voice_ui") vcUi(m);
+  else return false;
+  return true;
+}
+async function vcUi(m){
+  if (!DEMO && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;     // nur der Bildschirm im Womo reagiert
+  if (m.do === "page") show(m.page);
+  else if (m.do === "night") { night = !!m.on; applyNight(); }
+  else if (m.do === "timer") { TIMER.running = false; TIMER.remain = m.seconds; clockAction("tm", "start"); }
+  else if (m.do === "radio_vol") radioAction("vol", m.value);
+  else if (m.do === "radio") {
+    if (!m.on) { radioAction("stop"); }
+    else {
+      unlockAudio();
+      if (!RADIO.list.length) await radioLoad(RADIO.favs.length ? "fav" : "top");
+      const s = RADIO.playing || RADIO.favs[0] || RADIO.list[0];
+      if (s) radioPlay(s.id);
+    }
+  }
+  schedule();
+}
+function vcAction(cmd, p){
+  if (cmd !== "vc") return false;
+  const a = p[0];
+  if (a === "listen") { VC_STATE = "hört"; send({type: "voice_listen"}); }
+  else if (a === "setup") send({type: "voice_setup"});
+  else if (a === "on") send({type: "voice_enable", on: p[1] === "1"});
+  else if (a === "speak") send({type: "voice_speak", on: p[1] === "1"});
+  else if (a === "test") send({type: "voice_test"});
+  else if (a === "try") vcTry();
+  else if (a === "say") send({type: "voice_text", text: p.slice(1).join("|")});
+  vcDraw();
+  return true;
+}
+function vcTry(){
+  const el = document.getElementById("vcText"); const t = el ? el.value.trim() : "";
+  if (!t) return; send({type: "voice_text", text: t}); el.value = ""; oskHide(); el.blur();
+}
+function vcDraw(){
+  let b = document.getElementById("vcBtn");
+  if (!b) {
+    document.getElementById("stage").insertAdjacentHTML("beforeend", `<button id="vcBtn" data-tap="vc|listen" title="Sprechen">
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+      <div id="vcToast"></div>`);
+    b = document.getElementById("vcBtn");
+  }
+  const on = VC && VC.enabled && VC_STATE !== "aus";
+  b.style.display = on ? "flex" : "none";
+  b.className = VC_STATE === "hört" ? "listen" : VC_STATE === "denkt" ? "think" : "";
+  const t = document.getElementById("vcToast");
+  const showT = VC_TOAST || VC_STATE === "hört";
+  t.style.display = showT ? "block" : "none";
+  if (showT) t.innerHTML = VC_STATE === "hört" && !VC_TOAST ? `<div class="vcR">🎙️ Ich höre …</div>`
+    : `<div class="vcH">„${esc(VC_TOAST.heard)}“</div><div class="vcR">${esc(VC_TOAST.reply)}</div>`;
+  if (cur === "extras" && EXTAB === "sprache") exSprache();
+}
+function exSprache(){
+  const v = VC || {};
+  const wake = (v.wake || ["zentrale"])[0];
+  const W = wake.charAt(0).toUpperCase() + wake.slice(1);
+  const ready = v.vosk;
+  html("vcCard", `<h3>Sprachsteuerung</h3>
+    <div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div><div class="mid" style="color:${v.enabled && v.state !== "aus" ? "var(--green)" : "var(--mute)"}">${v.enabled && v.state !== "aus" ? "🎙️ Hört zu" : ready ? "Ausgeschaltet" : "Noch nicht eingerichtet"}</div>
+        <div class="hint" style="margin-top:4px">${esc(v.status || "")}</div></div>
+      ${ready ? `<button class="tog ${v.enabled ? "on" : ""}" data-tap="vc|on|${v.enabled ? 0 : 1}">${v.enabled ? "AN" : "AUS"}</button>` : ""}</div>
+    <div class="kv" style="font-size:14px;margin-top:12px">
+      <span>Spracherkennung</span><span>${v.vosk ? "✓ bereit" : "fehlt"}</span>
+      <span>Stimme</span><span>${v.piper ? "✓ Thorsten (natürlich)" : v.espeak ? "einfach (espeak)" : "fehlt"}</span>
+      <span>Mikrofon</span><span>${esc(v.mic || "nicht gefunden")}</span>
+      <span>Weckwort</span><span>„${esc(W)}“${(v.wake || []).length > 1 ? " oder „" + esc(v.wake[1]) + "“" : ""}</span></div>
+    ${!ready || !v.piper ? `<button class="btn sel" style="width:100%;margin-top:12px" data-tap="vc|setup" ${v.busy ? "disabled" : ""}>${v.busy ? "Wird eingerichtet ..." : "Sprachsteuerung einrichten (lädt ca. 150 MB)"}</button>
+      <div class="hint" style="margin-top:6px">Alles läuft danach auf dem Pi – ohne Internet und ohne Cloud.</div>` : ""}
+    <div class="row" style="gap:8px;margin-top:12px">
+      <button class="btn sm ${v.speak !== false ? "sel" : ""}" data-tap="vc|speak|${v.speak !== false ? 0 : 1}">${v.speak !== false ? "🔊 Antwortet laut" : "🔇 Nur Text"}</button>
+      <button class="btn sm" data-tap="vc|test">Stimme testen</button></div>`);
+  html("vcHelp", `<h3>So sprichst du mit der Zentrale</h3>
+    <div class="hint" style="font-size:15px;line-height:1.5;margin-bottom:8px">Erst „<b>${esc(W)}</b>“ sagen, dann den Befehl – oder unten rechts das Mikrofon antippen.</div>
+    ${[["Licht", `${W}, Licht aus · ${W}, Licht im Bad an · ${W}, Sitzgruppe auf 30 Prozent · ${W}, heller · ${W}, Abendlicht`],
+       ["Klima", `${W}, Klima auf 22 Grad · ${W}, Klima aus · ${W}, kühlen`],
+       ["Fragen", `${W}, wie voll ist der Akku? · Wie viel Wasser haben wir? · Wie wird das Wetter morgen? · Wie warm ist es draußen?`],
+       ["Sonstiges", `${W}, Radio an · Timer 10 Minuten · Bewegungsalarm scharf · Nachtmodus an · Zeig die Karte`]]
+      .map(([h, x]) => `<div style="margin-bottom:8px"><b style="font-size:15px">${h}</b><div class="hint" style="font-size:14px">${esc(x)}</div></div>`).join("")}`);
+  html("vcLast", v.heard ? `<div class="warnItem" style="border-left-color:var(--blue);background:rgba(59,163,255,.1)"><b>„${esc(v.heard)}“</b><span style="color:#cfe6ff">${esc(v.reply || "")}</span></div>` : "");
+}
+
 const RENDER = {start:updStart, energy:updEnergy, batt:updBatt, ac:updAc, tanks:updTanks, sw:updSw, level:updLevel, klima:updKlima, clock:updClock, radio:updRadio, wx:updWx, sys:updSys, extras:updExtras, licht:updLicht};
 let queued = false, lastPaint = 0;
 function schedule(force){
@@ -2779,6 +2893,8 @@ function startDemo(){
   demoExtras();
   demoExtrasData();
   demoLightsData();
+  VC = {enabled: true, state: "bereit", status: "Hört zu über plughw:CARD=ArrayUAC10,DEV=0", vosk: true, piper: true, espeak: false, mic: "reSpeaker XVF3800", wake: ["zentrale", "computer"], speak: true, heard: "licht im bad an", reply: "Bad an."};
+  VC_STATE = "bereit"; vcDraw();
   schedule(true);
 }
 function demoExtras(){
@@ -2795,6 +2911,9 @@ function demoExtras(){
 }
 function demoCommand(m){
   if (demoExtrasCmd(m) || demoLightsCmd(m)) return;
+  if (m.type === "voice_listen") { VC_STATE = "hört"; vcDraw(); setTimeout(() => { VC_STATE = "bereit"; vcMessage({type: "voice_event", heard: "wie voll ist der akku", reply: "Der Akku hat 78 Prozent. Reicht noch ca. 2,5 Tage."}); }, 2500); return; }
+  if (m.type === "voice_text") { vcMessage({type: "voice_event", heard: m.text, reply: "(Demo) Befehl verstanden."}); return; }
+  if ((m.type || "").startsWith("voice")) return;
   if (m.type === "ac_set") { for (const k in m) if (k !== "type") AC[k] = m[k]; return; }
   if (m.type === "guard") { GUARD.armed = m.armed; GUARD.triggered = false; return; }
   if (m.type === "bat_scan") { setTimeout(() => { BATSCAN.busy = false; BATSCAN.searched = true; BATSCAN.found = [

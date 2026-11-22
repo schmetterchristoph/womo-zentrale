@@ -31,6 +31,7 @@ import paho.mqtt.client as mqtt
 
 import extras
 import lights
+import voice
 
 try:
     from bleak import BleakClient, BleakScanner
@@ -1120,7 +1121,7 @@ async def ws_handler(request):
     await ws.send_str(json.dumps({"type": "changelog", "changelog": load_changelog()[:10]}))
     if state["level"]:
         await ws.send_str(json.dumps({"type": "level", "level": state["level"]}))
-    for msg in [lights.lights_msg()] + extras.snapshot_msgs():
+    for msg in [lights.lights_msg(), voice.status()] + extras.snapshot_msgs():
         await ws.send_str(json.dumps(msg))
     async for m in ws:
         if m.type != aiohttp.WSMsgType.TEXT:
@@ -1131,7 +1132,7 @@ async def ws_handler(request):
             continue
         t = cmd.get("type")
         try:
-            if await lights.handle(cmd, ws) or await extras.handle(cmd, ws):
+            if await lights.handle(cmd, ws) or await extras.handle(cmd, ws) or await voice.handle(cmd, ws):
                 continue
         except Exception as e:
             log.warning("Befehl %s fehlgeschlagen: %s", t, e)
@@ -1219,10 +1220,14 @@ async def on_startup(app):
     extras.start()
     lights.setup(CFG=CFG, broadcast=broadcast, save_config=save_config, log=log)
     lights.start()
+    voice.setup(CFG=CFG, BASE=BASE, broadcast=broadcast, save_config=save_config, log=log, values=values, state=state,
+                lights=lights, extras=extras, gree_set=gree_set, guard_set=guard_set)
+    voice.start()
 
 
 async def on_shutdown(app):
     extras.shutdown()
+    voice.shutdown()
 
 
 def main():

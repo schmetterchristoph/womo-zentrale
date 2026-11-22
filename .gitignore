@@ -13,3 +13,4 @@ checklist.json
 trip.json
 maintenance.json
 *.json.tmp
+models/

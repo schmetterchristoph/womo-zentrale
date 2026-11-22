@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.5.6",
+    "date": "2026-11-22",
+    "changes": [
+      "Sprachsteuerung: „Zentrale, Licht aus“ – läuft komplett auf dem Pi, ohne Cloud",
+      "Versteht Licht, Szenen, Dimmen, Klima, Fragen zu Akku, Wasser, Wetter, Temperatur, Uhrzeit, Radio, Timer, Bewegungsalarm",
+      "Antwortet mit natürlicher Stimme und zeigt die Antwort auf dem Bildschirm",
+      "Mikrofon-Taste unten rechts (sprechen ohne Weckwort)",
+      "Extras → Sprache: Einrichten per Knopfdruck, Befehle zum Ausprobieren auch tippen"
+    ]
+  },
+  {
     "version": "1.5.5",
     "date": "2026-11-22",
     "changes": [
