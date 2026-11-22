@@ -183,13 +183,41 @@ async def keepalive_loop():
 # ---------------------------------------------------------------------------
 # Wetter (Open-Meteo)
 # ---------------------------------------------------------------------------
+IP_LOC = {"lat": None, "lon": None, "place": None, "at": 0}
+
+
 def gps_position():
+    """Standort: 1. GPS vom Cerbo, 2. Internet-Standort (WLAN/Mobilfunk), 3. fester Ort aus config."""
     for k, v in list(values.items()):
         if k.startswith("gps/") and k.endswith("/Position/Latitude") and v is not None:
             lon = values.get(k.replace("Latitude", "Longitude"))
             if lon is not None:
-                return float(v), float(lon), True
-    return CFG["weather"]["fallback_lat"], CFG["weather"]["fallback_lon"], False
+                return float(v), float(lon), "gps"
+    if IP_LOC["lat"] is not None:
+        return IP_LOC["lat"], IP_LOC["lon"], "internet"
+    return CFG["weather"]["fallback_lat"], CFG["weather"]["fallback_lon"], "fest"
+
+
+async def update_ip_location(s):
+    """Ungefähren Standort über die Internet-Verbindung bestimmen (alle 15 Minuten)."""
+    if not CFG["weather"].get("auto_location", True) or time.time() - IP_LOC["at"] < 900:
+        return
+    IP_LOC["at"] = time.time()
+    sources = (
+        ("http://ip-api.com/json/?lang=de&fields=status,lat,lon,city", lambda d: (d.get("lat"), d.get("lon"), d.get("city"))),
+        ("https://ipapi.co/json/", lambda d: (d.get("latitude"), d.get("longitude"), d.get("city"))),
+        ("https://ipwho.is/?lang=de", lambda d: (d.get("latitude"), d.get("longitude"), d.get("city"))),
+    )
+    for url, pick in sources:
+        try:
+            async with s.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                lat, lon, city = pick(await r.json(content_type=None))
+            if lat is not None and lon is not None:
+                IP_LOC.update(lat=float(lat), lon=float(lon), place=city)
+                log.info("Standort über Internet: %s (%.3f, %.3f)", city, lat, lon)
+                return
+        except Exception as e:
+            log.info("Standort über %s nicht ermittelt: %s", url.split("/")[2], e)
 
 
 def dist_km(a, b):
@@ -197,11 +225,12 @@ def dist_km(a, b):
 
 
 async def weather_loop():
-    last_pos, last_fetch = None, 0
+    last_pos, last_fetch, last_src = None, 0, None
     async with aiohttp.ClientSession(headers={"User-Agent": "Womo-Zentrale/1.0"}) as s:
         while True:
-            lat, lon, from_gps = gps_position()
-            moved = last_pos is None or dist_km(last_pos, (lat, lon)) > 5
+            await update_ip_location(s)
+            lat, lon, src = gps_position()
+            moved = last_pos is None or src != last_src or dist_km(last_pos, (lat, lon)) > 5
             if moved or time.time() - last_fetch > 900:
                 try:
                     url = ("https://api.open-meteo.com/v1/forecast"
@@ -215,14 +244,25 @@ async def weather_loop():
                     async with s.get(url, timeout=aiohttp.ClientTimeout(total=20)) as r:
                         state["weather"] = await r.json()
                         state["weather"]["fetched"] = time.time()
-                    if moved and from_gps:
-                        url = (f"https://nominatim.openstreetmap.org/reverse?format=json&zoom=10"
-                               f"&lat={lat:.4f}&lon={lon:.4f}&accept-language=de")
-                        async with s.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
-                            a = (await r.json()).get("address", {})
-                            state["weather_place"] = (a.get("city") or a.get("town") or a.get("village")
-                                                      or a.get("municipality") or a.get("county") or "Standort")
-                    last_pos, last_fetch = (lat, lon), time.time()
+                        state["weather"]["loc_source"] = src
+                    if moved:
+                        place = None
+                        if src == "fest":
+                            place = CFG["weather"].get("fallback_name") or "Standort"
+                        else:
+                            try:
+                                url = (f"https://nominatim.openstreetmap.org/reverse?format=json&zoom=10"
+                                       f"&lat={lat:.4f}&lon={lon:.4f}&accept-language=de")
+                                async with s.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
+                                    a = (await r.json()).get("address", {})
+                                    place = (a.get("city") or a.get("town") or a.get("village")
+                                             or a.get("municipality") or a.get("county"))
+                            except Exception as e:
+                                log.info("Ortsname nicht ermittelt: %s", e)
+                            place = place or (IP_LOC["place"] if src == "internet" else None) or "Standort"
+                        state["weather_place"] = place
+                        log.info("Wetter für %s (Quelle: %s)", place, src)
+                    last_pos, last_fetch, last_src = (lat, lon), time.time(), src
                     await broadcast({"type": "weather", "weather": state["weather"], "place": state["weather_place"]})
                 except Exception as e:
                     log.warning("Wetter nicht geladen: %s", e)

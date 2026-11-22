@@ -9,7 +9,8 @@
   "weather": {
     "fallback_lat": 51.52,
     "fallback_lon": 6.33,
-    "fallback_name": "Geldern"
+    "fallback_name": "Geldern",
+    "auto_location": true
   },
   "shr": {
     "enabled": false,
