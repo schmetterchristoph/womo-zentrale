@@ -872,7 +872,8 @@ async def ws_handler(request):
 
 
 async def index(request):
-    return web.FileResponse(BASE / "static" / "index.html")
+    return web.FileResponse(BASE / "static" / "index.html",
+                            headers={"Cache-Control": "no-store, must-revalidate"})
 
 
 async def on_startup(app):
