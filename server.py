@@ -699,10 +699,16 @@ async def rollback():
     u = state["update"]
     if not (BASE / ".git").exists():
         return
-    _, cur = await git("tag", "--points-at", "HEAD")
-    _, tags = await git("tag", "--merged", "HEAD", "--sort=-v:refname")
-    prev = next((t for t in tags.split() if t not in cur.split()), None)
-    target = prev or "HEAD~1"
+    # Jede Version ändert CHANGELOG.json -> diese Stände sind die Versionen
+    _, head = await git("rev-parse", "HEAD")
+    _, hist = await git("log", "--format=%H", "HEAD", "--", "CHANGELOG.json")
+    hs = hist.split()
+    if hs and hs[0] == head:
+        target = hs[1] if len(hs) > 1 else "HEAD~1"
+    elif hs:
+        target = hs[0]
+    else:
+        target = "HEAD~1"
     rc, msg = await git("reset", "--hard", "--quiet", target)
     if rc != 0:
         u.update(status=f"Zurückstufen fehlgeschlagen: {msg[:60]}")
