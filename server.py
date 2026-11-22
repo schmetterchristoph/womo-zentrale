@@ -648,6 +648,7 @@ async def toggle_fullscreen():
 # Programm beendet sich – systemd startet es sofort mit der neuen Version neu.
 # ---------------------------------------------------------------------------
 NEEDS_INSTALL = BASE / ".needs_install"
+PAUSED = BASE / ".update_paused"          # nach einem Zurückstufen: keine Auto-Updates
 state["update"] = {"version": "", "available": False, "status": ""}
 
 
@@ -673,9 +674,12 @@ async def check_update(apply: bool):
     _, remote = await git("rev-parse", "@{u}")
     u.update(available=local != remote, remote=remote[:7], checked=time.time(),
              status="Neue Version verfügbar" if local != remote else "Aktuell",
-             needs_install=NEEDS_INSTALL.exists())
+             needs_install=NEEDS_INSTALL.exists(), paused=PAUSED.exists())
+    if local != remote and PAUSED.exists() and not apply:
+        u["status"] = "Neue Version da – automatisch pausiert (zurückgestuft)"
     await broadcast({"type": "update", "update": u})
-    if local != remote and (apply or CFG.get("auto_update", True)):
+    if local != remote and (apply or (CFG.get("auto_update", True) and not PAUSED.exists())):
+        PAUSED.unlink(missing_ok=True)
         _, changed = await git("diff", "--name-only", local, remote)
         rc, msg = await git("reset", "--hard", "--quiet", remote)
         if rc != 0:
@@ -688,6 +692,27 @@ async def check_update(apply: bool):
         await broadcast({"type": "update", "update": {**u, "status": "Update wird installiert ..."}})
         await asyncio.sleep(1.5)
         os._exit(0)          # systemd (Restart=always) startet die neue Version
+
+
+async def rollback():
+    """Eine Version zurück (nach Versions-Markierung), Auto-Update bis zur nächsten Taste pausieren."""
+    u = state["update"]
+    if not (BASE / ".git").exists():
+        return
+    _, cur = await git("tag", "--points-at", "HEAD")
+    _, tags = await git("tag", "--merged", "HEAD", "--sort=-v:refname")
+    prev = next((t for t in tags.split() if t not in cur.split()), None)
+    target = prev or "HEAD~1"
+    rc, msg = await git("reset", "--hard", "--quiet", target)
+    if rc != 0:
+        u.update(status=f"Zurückstufen fehlgeschlagen: {msg[:60]}")
+        await broadcast({"type": "update", "update": u})
+        return
+    PAUSED.write_text(target)
+    log.info("Auf %s zurückgestuft – Neustart", target)
+    await broadcast({"type": "update", "update": {**u, "status": f"Wechsle zu {target} ..."}})
+    await asyncio.sleep(1.5)
+    os._exit(0)
 
 
 async def update_loop():
@@ -703,6 +728,13 @@ async def update_loop():
 # ---------------------------------------------------------------------------
 # Web / WebSocket
 # ---------------------------------------------------------------------------
+def load_changelog():
+    try:
+        return json.loads((BASE / "CHANGELOG.json").read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+
 def status_msg():
     online = time.time() - state["last_msg"] < 60
     return {"type": "status", "cerbo": state["cerbo"] if online or state["cerbo"] != "Verbunden" else "Keine Daten",
@@ -711,7 +743,8 @@ def status_msg():
             "wheelbase": CFG["vehicle"].get("wheelbase_m", 4.75), "track": CFG["vehicle"].get("track_m", 2.0),
             "lithium_cfg": [b.get("name") for b in CFG.get("lithium", {}).get("batteries", [])],
             "lithium_addr": [b.get("address", "") for b in CFG.get("lithium", {}).get("batteries", [])],
-            "version": state["update"].get("version", ""), "ntfy_topic": CFG.get("alarm", {}).get("ntfy_topic", "")}
+            "version": state["update"].get("version", ""),
+            "app_version": (load_changelog() or [{}])[0].get("version", ""), "ntfy_topic": CFG.get("alarm", {}).get("ntfy_topic", "")}
 
 
 async def broadcast(msg):
@@ -758,6 +791,7 @@ async def ws_handler(request):
     await ws.send_str(json.dumps({"type": "ac", "ac": state["ac"]}))
     await ws.send_str(json.dumps({"type": "guard", "guard": guard_public()}))
     await ws.send_str(json.dumps({"type": "update", "update": state["update"]}))
+    await ws.send_str(json.dumps({"type": "changelog", "changelog": load_changelog()[:10]}))
     if state["level"]:
         await ws.send_str(json.dumps({"type": "level", "level": state["level"]}))
     async for m in ws:
@@ -772,6 +806,8 @@ async def ws_handler(request):
             cerbo_write(str(cmd.get("path", "")), cmd.get("value"))
         elif t == "shr" and cmd.get("cmd") in ("level", "retract"):
             asyncio.create_task(shr_send(cmd["cmd"]))
+        elif t == "rollback":
+            asyncio.create_task(rollback())
         elif t == "update_check":
             asyncio.create_task(check_update(apply=bool(cmd.get("apply"))))
         elif t == "fullscreen":

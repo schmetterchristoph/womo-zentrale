@@ -1,0 +1,29 @@
+[
+  {
+    "version": "1.2.0",
+    "date": "2026-11-22",
+    "changes": [
+      "Versionsnummer wird oben in der Kopfzeile und auf der Startseite angezeigt",
+      "Neueste Änderungen stehen jetzt unter System → Updates",
+      "PIN zum Verlassen des Vollbilds geändert",
+      "Neue Taste: auf vorherige Version zurück (unter System → Updates)"
+    ]
+  },
+  {
+    "version": "1.1.0",
+    "date": "2026-11-22",
+    "changes": [
+      "Vollbild lässt sich nur noch mit PIN verlassen",
+      "Updates werden alle 5 Minuten gesucht (vorher 30 Minuten)"
+    ]
+  },
+  {
+    "version": "1.0.0",
+    "date": "2026-11-22",
+    "changes": [
+      "Erste Version mit automatischen Updates über GitHub",
+      "Vollbild-Taste, eigene Bildschirmtastatur, Akkus suchen per Bluetooth",
+      "Startseite mit Illustration, Gefrierfach und Außentemperatur"
+    ]
+  }
+]
