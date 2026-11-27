@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.6.1",
+    "date": "2026-11-27",
+    "changes": [
+      "Startseite: Das Womo dreht sich ganz langsam ein paar Grad nach links und rechts (3D-Effekt), Anzeigen und Leuchtlinien wandern mit",
+      "Antippen hält die Drehung an und stellt das Womo gerade – nach 30 Sekunden ohne Berührung pendelt es wieder"
+    ]
+  },
+  {
     "version": "1.6.0",
     "date": "2026-11-27",
     "changes": [
