@@ -146,6 +146,12 @@ input[type=range]{width:100%;height:40px;accent-color:var(--blue)}
 .pinOk{background:var(--green);border-color:var(--green);color:#fff;font-size:22px}
 .verTag{font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:8px;padding:2px 8px}
 #sleepBox{position:absolute;inset:0;background:#000;z-index:80;display:none;cursor:none}
+/* Stromfluss auf der Startseite */
+.flow{transition:opacity .8s}
+.flow path{fill:none;stroke-linejoin:round;stroke-linecap:round}
+.flBase{stroke-opacity:.28;filter:url(#iGlow)}
+.flRun{stroke-dasharray:16 30;filter:url(#iGlow)}
+.flCore{stroke:#fff;stroke-opacity:.9;stroke-dasharray:6 40;stroke-dashoffset:-5}
 /* Radio */
 .rGrid{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:74px;gap:8px}
 .rTile{display:flex;align-items:center;gap:12px;padding:0 12px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);color:var(--text);
@@ -1751,19 +1757,22 @@ const ICALL = [
   {id:"coFresh", t:"FRISCHWASSER",   a:[1160, 640], b:[623, 626, 165, 76], ey:606, go:"tanks"},
   {id:"coShore", t:"LANDSTROM",      a:[1480, 640], b:[794, 626, 165, 76], ey:614, go:"ac"},
 ];
-// Leitungen für die Energiepunkte (Bild-px)
+// Stromleitungen im Bild (Bild-px, genau auf den grünen und blauen Linien der Illustration)
 const IFLOWS = {
-  pv:    {c:"#ffd23a", P:[[1400, 150], [1400, 200], [600, 205], [578, 225], [578, 585], [640, 600]]},
-  shore: {c:"#38e8ff", P:[[1480, 640], [1300, 560], [990, 560], [900, 590], [860, 620]]},
-  multi: {c:"#3ba3ff", P:[[830, 640], [800, 640]]},
-  load:  {c:"#ffb15c", P:[[640, 590], [585, 560], [585, 300], [610, 265], [1000, 265]]},
+  // Solar: Dach (grün) -> vorne runter -> Batteriefach -> Akkus
+  pv:    {c:"#5dff6e", w:3.5, P:[[1640, 160], [1400, 166], [1300, 170], [1000, 184], [700, 199], [600, 202], [578, 210], [571, 222], [571, 372], [555, 396], [555, 560], [580, 592], [660, 584], [700, 600]]},
+  // Landstrom: unter dem Boden (blau) -> Batteriefach -> MultiPlus
+  shore: {c:"#5fe9ff", w:3.5, P:[[1362, 556], [1320, 548], [1280, 536], [1200, 540], [1120, 554], [1040, 558], [905, 572], [905, 612], [878, 616]]},
+  // Akkus <-> MultiPlus (grün, unten im Batteriefach)
+  multi: {c:"#5dff6e", w:3, P:[[640, 690], [700, 687], [780, 681], [822, 679], [832, 660]]},
+  // Verbraucher: MultiPlus -> Wand vorne hoch -> Dach (blau) -> Heck
+  load:  {c:"#3ba3ff", w:3.5, P:[[845, 592], [700, 578], [560, 577], [556, 430], [561, 310], [562, 232], [600, 214], [1000, 202], [1300, 184], [1640, 170], [1676, 200], [1678, 440], [1660, 464], [1300, 492]]},
 };
 
-function coPath(g, ax, ay){ return g.y > g.ay ? `M${ax.toFixed(1)} ${ay.toFixed(1)} V${g.ey} H${g.bx} V${g.y}` : `M${ax.toFixed(1)} ${ay.toFixed(1)} V${g.ey} H${g.bx} V${g.y + g.h}`; }
 function imgCallout(co){
   const ax = IX(co.a[0]), ay = IY(co.a[1]), [x, y, w, h] = co.b, bx = x + w / 2;
-  const g = {id: co.id, ax, ay, ey: co.ey, bx, y, h}; IGEOM.push(g);
-  return `<path class="coLine" id="${co.id}IL" d="${coPath(g, ax, ay)}"/><circle class="coDot" id="${co.id}ID" cx="${ax}" cy="${ay}" r="4.5"/>
+  const d = y > ay ? `M${ax} ${ay} V${co.ey} H${bx} V${y}` : `M${ax} ${ay} V${co.ey} H${bx} V${y + h}`;
+  return `<path class="coLine" d="${d}"/><circle class="coDot" cx="${ax}" cy="${ay}" r="4.5"/>
     <g class="hud" transform="translate(${x},${y})" data-tap="page|${co.go}">
       <path d="${hudFrame(w, h)}" class="hudFrame"/>
       <text x="12" y="19" class="hudT">${co.t}</text>
@@ -1771,46 +1780,17 @@ function imgCallout(co){
       <text x="12" y="${h - 11}" class="hudS" id="${co.id}S"></text></g>`;
 }
 
-// Leichtes 3D-Pendeln des Womos um die Hochachse (Antippen hält es an)
-const ROT = {A: 4, T: 22, ph: 0, amp: 1, a: 0, last: null, resumeAt: 0, P: 1500, cx: 0, cy: 0};
-let IGEOM = [];
-function rotProj(x, y){
-  const th = ROT.a * Math.PI / 180, dx = x - ROT.cx, dy = y - ROT.cy;
-  const f = ROT.P / (ROT.P + dx * Math.sin(th));
-  return [ROT.cx + dx * Math.cos(th) * f, ROT.cy + dy * f];
-}
-function rotPause(){ ROT.resumeAt = performance.now() + 30000; }
-function rotStep(now, dt){
-  const run = now > ROT.resumeAt;
-  ROT.amp += ((run ? 1 : 0) - ROT.amp) * Math.min(1, dt * (run ? .4 : 3));
-  if (ROT.amp > .001) ROT.ph += dt * 2 * Math.PI / ROT.T;
-  ROT.a = ROT.A * ROT.amp * Math.sin(ROT.ph);
-  if (ROT.last !== null && Math.abs(ROT.a - ROT.last) < .003) return false;
-  ROT.last = ROT.a;
-  const el = document.getElementById("iRot");
-  if (el) el.style.transform = `perspective(${ROT.P}px) rotateY(${ROT.a.toFixed(3)}deg)`;
-  for (const g of IGEOM) {
-    const [x, y] = rotProj(g.ax, g.ay);
-    if (!g.L) { g.L = document.getElementById(g.id + "IL"); g.D = document.getElementById(g.id + "ID"); }
-    if (g.L) g.L.setAttribute("d", coPath(g, x, y));
-    if (g.D) { g.D.setAttribute("cx", x.toFixed(1)); g.D.setAttribute("cy", y.toFixed(1)); }
-  }
-  for (const n of document.querySelectorAll("#womoImg .iAtt")) {
-    const bx = +n.dataset.x, by = +n.dataset.y, [x, y] = rotProj(bx, by);
-    n.setAttribute("transform", `translate(${(x - bx).toFixed(1)} ${(y - by).toFixed(1)})`);
-  }
-  return true;
-}
 function buildImgStart(){
-  IGEOM = [];
   const EX = STAGE_H - 720, VH = STAGE_H;        // zusätzliche Höhe bei 16:10 (z. B. 10,1"-Display)
   IOY = 140 + Math.round(EX * .55);
   const BS = 64 + EX / 6, BH = 56 + EX / 8;
-  const flows = Object.entries(IFLOWS).map(([k, f]) =>
-    `<g id="if_${k}">${Array.from({length: 8}, () => `<circle r="4" fill="${f.c}" filter="url(#iGlow)" cx="-20" cy="-20"/>`).join("")}</g>`).join("");
+  const flows = Object.entries(IFLOWS).map(([k, f]) => {
+    const d = "M" + f.P.map(([x, y]) => `${IX(x).toFixed(1)} ${IY(y).toFixed(1)}`).join(" L");
+    return `<g id="if_${k}" class="flow" style="opacity:0"><path d="${d}" class="flBase" stroke="${f.c}" stroke-width="${f.w + 3}"/>
+      <path d="${d}" class="flRun" stroke="${f.c}" stroke-width="${f.w}"/><path d="${d}" class="flCore" stroke-width="${f.w / 2.2}"/></g>`; }).join("");
   const battBoxes = [[633, 635], [705, 635], [775, 635]].map(([x, y], i) =>
-    `<g class="iAtt" data-x="${IX(x)}" data-y="${IY(y)}"><rect id="ibF${i}" x="${IX(x - 33)}" y="${IY(y - 40)}" width="${66 * IK}" height="${80 * IK}" rx="3" fill="#34e39b" opacity=".0"/>
-     <text id="ibT${i}" x="${IX(x)}" y="${IY(y) + 5}" text-anchor="middle" class="imgLbl">--</text></g>`).join("");
+    `<rect id="ibF${i}" x="${IX(x - 33)}" y="${IY(y - 40)}" width="${66 * IK}" height="${80 * IK}" rx="3" fill="#34e39b" opacity=".0"/>
+     <text id="ibT${i}" x="${IX(x)}" y="${IY(y) + 5}" text-anchor="middle" class="imgLbl">--</text>`).join("");
   paint("start", `<div id="womoImg" style="position:absolute;inset:0">
   <svg class="fl hudsvg" viewBox="0 0 1188 ${VH}" width="100%" height="100%" style="position:absolute;inset:0">
     <defs>
@@ -1823,21 +1803,16 @@ function buildImgStart(){
     </defs>
     <rect width="1188" height="${VH}" fill="url(#iBg)"/>
     ${constellation()}
-  </svg>
-  <div id="iRot" style="position:absolute;left:${IOX}px;top:${IOY}px;width:930px;height:${IMG_H * IK}px;transform-origin:50% 50%;will-change:transform">
-    <img src="${START_IMG}" alt="" draggable="false" style="width:100%;height:100%;display:block;pointer-events:none;
-      -webkit-mask-image:linear-gradient(90deg,transparent 1%,#000 6%,#000 94%,transparent 99%),linear-gradient(180deg,transparent 1%,#000 8%,#000 92%,transparent 99%);
-      -webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent 1%,#000 6%,#000 94%,transparent 99%),linear-gradient(180deg,transparent 1%,#000 8%,#000 92%,transparent 99%);mask-composite:intersect"></div>
-  <svg class="fl hudsvg" viewBox="0 0 1188 ${VH}" width="100%" height="100%" style="position:absolute;inset:0">
+    <image href="${START_IMG}" x="${IOX}" y="${IOY}" width="930" height="${IMG_H * IK}" preserveAspectRatio="xMidYMid meet" mask="url(#iMask)"/>
     <!-- Solar leuchtet bei Sonne -->
-    <g class="iAtt" data-x="${IX(1050)}" data-y="${IY(145)}"><ellipse id="iPv" cx="${IX(1050)}" cy="${IY(145)}" rx="${520 * IK}" ry="${38 * IK}" fill="#ffc233" opacity="0" filter="url(#iSoft)"/></g>
+    <ellipse id="iPv" cx="${IX(1050)}" cy="${IY(145)}" rx="${520 * IK}" ry="${38 * IK}" fill="#ffc233" opacity="0" filter="url(#iSoft)"/>
     <!-- Akkus: Füllstand je Akku -->
     ${battBoxes}
     <!-- Tanks -->
-    <g class="iAtt" data-x="${IX(1078)}" data-y="${IY(632)}"><text id="iGreyT" x="${IX(1078)}" y="${IY(632)}" text-anchor="middle" class="imgLbl">--</text></g>
-    <g class="iAtt" data-x="${IX(1162)}" data-y="${IY(626)}"><text id="iFreshT" x="${IX(1162)}" y="${IY(626)}" text-anchor="middle" class="imgLbl">--</text></g>
+    <text id="iGreyT" x="${IX(1078)}" y="${IY(632)}" text-anchor="middle" class="imgLbl">--</text>
+    <text id="iFreshT" x="${IX(1162)}" y="${IY(626)}" text-anchor="middle" class="imgLbl">--</text>
     <!-- Landstrom-Anzeige an der Plattform -->
-    <g class="iAtt" data-x="${IX(1480)}" data-y="${IY(640)}"><circle id="iShore" cx="${IX(1480)}" cy="${IY(640)}" r="9" fill="#38e8ff" opacity="0" filter="url(#iGlow)"/></g>
+    <circle id="iShore" cx="${IX(1480)}" cy="${IY(640)}" r="9" fill="#38e8ff" opacity="0" filter="url(#iGlow)"/>
     ${flows}
     ${ICALL.map(co => co.b[1] > 400 ? imgCallout({...co, b: [co.b[0], co.b[1] + EX, co.b[2], co.b[3]], ey: co.ey + EX}) : imgCallout(co)).join("")}
     <!-- Titel -->
@@ -1870,15 +1845,10 @@ function buildImgStart(){
     <text x="1070" y="${690 + EX}" class="hClock" text-anchor="middle" id="hClock">--:--</text>
     <g style="display:none"><rect id="battFill"/><rect id="freshFill"/><rect id="greyFill"/><rect id="pvGlow"/><ellipse id="lamp"/><rect id="jackF"/><rect id="jackR"/><path id="shoreCable"/><text id="coJackV"/><text id="coJackS"/></g>
   </svg></div>`);
-  ROT.cx = IOX + 465; ROT.cy = IOY + IMG_H * IK / 2; ROT.last = null;
-  document.getElementById("womoImg").addEventListener("pointerdown", rotPause, true);
-  // Leitungen vorberechnen
   for (const [k, f] of Object.entries(IFLOWS)) {
-    f.pts = f.P.map(([x, y]) => [IX(x), IY(y)]);
-    f.seg = []; f.tot = 0;
-    for (let i = 1; i < f.pts.length; i++) { const d = Math.hypot(f.pts[i][0] - f.pts[i - 1][0], f.pts[i][1] - f.pts[i - 1][1]); f.seg.push(d); f.tot += d; }
-    f.dots = [...document.querySelectorAll(`#if_${k} circle`)];
-    f.t = 0; f.on = false; f.rev = false; f.speed = 1;
+    f.g = document.getElementById("if_" + k);
+    f.runs = f.g ? [...f.g.querySelectorAll(".flRun,.flCore")] : [];
+    f.off = f.off || 0; f.on = !!f.on; f.rev = !!f.rev; f.speed = f.speed || 1; f.shown = null;
   }
   if (!IFLOWS.raf) IFLOWS.raf = requestAnimationFrame(frameImg);
 }
@@ -1896,15 +1866,13 @@ function frameImg(now){
   if (cur !== "start" || !document.getElementById("womoImg")) { IFLOWS.raf = 0; return; }
   IFLOWS.raf = requestAnimationFrame(frameImg);
   const dt = Math.min(.1, (now - (IFLOWS.last || now)) / 1000); IFLOWS.last = now;
-  rotStep(now, dt);
   for (const f of Object.values(IFLOWS)) {
-    if (!f.dots) continue;
-    f.t = (f.t + dt * .07 * f.speed) % 1;
-    f.dots.forEach((c, i) => {
-      if (!f.on) { if (c.getAttribute("cx") !== "-20") { c.setAttribute("cx", -20); c.setAttribute("cy", -20); } return; }
-      let u = (f.t + i / f.dots.length) % 1; if (f.rev) u = 1 - u;
-      const [x, y] = rotProj(...flowAt(f, u)); c.setAttribute("cx", x.toFixed(1)); c.setAttribute("cy", y.toFixed(1));
-    });
+    if (!f.g) continue;
+    if (f.shown !== f.on) { f.shown = f.on; f.g.style.opacity = f.on ? 1 : 0; }
+    if (!f.on) continue;
+    f.off = (f.off + dt * 38 * f.speed * (f.rev ? -1 : 1)) % 3200;
+    f.runs[0].style.strokeDashoffset = (-f.off).toFixed(1);
+    if (f.runs[1]) f.runs[1].style.strokeDashoffset = (-f.off - 5).toFixed(1);
   }
 }
 

@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.6.2",
+    "date": "2026-11-27",
+    "changes": [
+      "Pendeln des Womos auf der Startseite wieder entfernt",
+      "Stromfluss sichtbar: Leuchtende Impulse laufen direkt auf den grünen und blauen Leitungen im Bild",
+      "Grün: Solar vom Dach zu den Akkus und Akkus ↔ MultiPlus – Blau: Landstrom und Verbraucher",
+      "Laufrichtung und Tempo zeigen, wohin wie viel Strom fließt; ohne Strom ist die Leitung aus"
+    ]
+  },
+  {
     "version": "1.6.1",
     "date": "2026-11-27",
     "changes": [
