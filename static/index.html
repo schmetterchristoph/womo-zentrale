@@ -152,6 +152,7 @@ input[type=range]{width:100%;height:40px;accent-color:var(--blue)}
 .flBase{stroke-opacity:.28;filter:url(#iGlow)}
 .flRun{stroke-dasharray:16 30;filter:url(#iGlow)}
 .flCore{stroke:#fff;stroke-opacity:.9;stroke-dasharray:6 40;stroke-dashoffset:-5}
+.btn.sel .mute{color:#dcecff}
 /* Radio */
 .rGrid{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:74px;gap:8px}
 .rTile{display:flex;align-items:center;gap:12px;padding:0 12px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);color:var(--text);
@@ -340,7 +341,7 @@ function connect(){
   ws.onopen = () => { opened = true; };
   ws.onmessage = ev => {
     const m = JSON.parse(ev.data);
-    if (exMessage(m) || lgMessage(m) || vcMessage(m) || snMessage(m)) {}
+    if (exMessage(m) || lgMessage(m) || vcMessage(m) || snMessage(m) || cbMessage(m)) {}
     else if (m.type === "snapshot") { for (const k in V) delete V[k]; Object.assign(V, m.values); }
     else if (m.type === "delta") Object.assign(V, m.values);
     else if (m.type === "status") {
@@ -395,7 +396,7 @@ document.addEventListener("click", e => {
 });
 function runAction(a){
   const [cmd, ...p] = a.split("|");
-  if (exAction(cmd, p) || lgAction(cmd, p) || vcAction(cmd, p) || snAction(cmd, p)) { schedule(); return; }
+  if (exAction(cmd, p) || lgAction(cmd, p) || vcAction(cmd, p) || snAction(cmd, p) || cbAction(cmd, p)) { schedule(); return; }
   if (cmd === "w") write(p[0], Number(p[1]));
   else if (cmd === "shr") send({type:"shr", cmd:p[0]});
   else if (cmd === "limit") limitStep(Number(p[0]), p[1]);
@@ -2008,7 +2009,8 @@ function updSys(){
       <div class="card" style="display:flex;flex-direction:column;height:100%"><input type="text" id="sysSearch" placeholder="Werte durchsuchen ...">
         <div class="scroll" id="sysVals" data-keep="v" style="flex:1;margin-top:10px"></div></div>
       <div class="grid scroll" data-keep="sr" style="align-content:start;height:100%">
-        <div class="card"><h3>Verbindung</h3><div class="kv" id="sysConn" style="font-size:15px"></div></div>
+        <div class="card"><h3>Verbindung</h3><div class="kv" id="sysConn" style="font-size:15px"></div>
+          <button class="btn sm sel" style="width:100%;margin-top:10px" data-tap="cb|open">Cerbo verbinden / ändern</button></div>
         <div class="card"><h3>Helligkeit</h3><input type="range" min="5" max="100" value="80" id="bright">
           <div class="row" style="margin-top:8px;gap:8px"><button class="btn" style="flex:1;min-width:0;padding:0 8px;font-size:16px" id="nightBtn">Nachtmodus</button><button class="btn" style="flex:1;min-width:0;padding:0 8px;font-size:16px" id="autoNightBtn">Auto 🌙</button></div>
           <div class="hint" style="margin-top:6px">Automatisch: dunkler von Sonnenuntergang bis Sonnenaufgang.</div></div>
@@ -2036,7 +2038,7 @@ function updSys(){
   html("sysDevs", list.map(d => { const [s, i] = d.split("/");
     return `<button class="btn ${d === selDev ? "sel" : ""}" data-tap="dev|${d}">${esc(devName(s, i))}<br><span class="mute" style="font-size:12px">${d}</span></button>`; }).join(""));
   html("sysVals", `<table>${rows}</table>`);
-  html("sysConn", `<span>Cerbo</span><span>${esc(ST.cerbo)}</span><span>Portal-ID</span><span>${esc(ST.portal_id || "--")}</span>
+  html("sysConn", `<span>Cerbo</span><span>${esc(ST.cerbo)}</span><span>Adresse</span><span>${esc(ST.cerbo_host || "--")}</span><span>Portal-ID</span><span>${esc(ST.portal_id || "--")}</span>
     <span>Werte</span><span>${Object.keys(V).length}</span><span>Modus</span><span>${DEMO ? "Demo" : "Live"}</span>`);
   const to = ST.screen_timeout_min ?? 0;
   html("sysTo", [[0, "Nie"], [1, "1 min"], [5, "5 min"], [10, "10 min"], [15, "15 min"], [30, "30 min"], [60, "1 Std"]].map(([m, t]) =>
@@ -3076,6 +3078,59 @@ function autoNightTick(){
 }
 setInterval(autoNightTick, 60e3);
 
+// ===========================================================================
+// Cerbo verbinden (Adresse suchen / eintragen)
+// ===========================================================================
+const CB = {open: false, busy: false, found: [], searched: false};
+function cbMessage(m){ if (m.type !== "cerbo_scan") return false; Object.assign(CB, {busy: m.busy, found: m.found || [], searched: m.searched}); cbDraw(); return true; }
+function cbAction(cmd, p){
+  if (cmd !== "cb") return false;
+  if (p[0] === "open") { CB.open = true; if (!CB.searched && !CB.busy) { CB.busy = true; send({type: "cerbo_scan"}); } }
+  else if (p[0] === "close") { CB.open = false; oskHide(); }
+  else if (p[0] === "scan") { CB.busy = true; send({type: "cerbo_scan"}); }
+  else if (p[0] === "pick") { document.getElementById("cbHost").value = p[1]; }
+  else if (p[0] === "save") cbSave();
+  cbDraw(); return true;
+}
+function cbSave(){
+  const h = document.getElementById("cbHost").value.trim(), pw = document.getElementById("cbPw").value;
+  if (!h) return;
+  const m = {type: "cerbo_set", host: h}; if (pw) m.password = pw;
+  send(m); document.getElementById("cbPw").value = ""; oskHide(); CB.open = false; cbDraw();
+}
+function cbDraw(){
+  let el = document.getElementById("cbBox");
+  if (!el) {
+    document.getElementById("stage").insertAdjacentHTML("beforeend", `<div id="cbBox" style="position:absolute;inset:0;background:rgba(3,10,18,.9);display:none;align-items:flex-start;justify-content:center;padding-top:20px;z-index:45">
+      <div class="card" style="width:760px;display:flex;flex-direction:column;gap:10px">
+        <div class="row" style="justify-content:space-between"><h3 style="margin:0">Cerbo GX verbinden</h3><button class="btn sm" data-tap="cb|close">Schließen</button></div>
+        <div class="hint" id="cbNow"></div>
+        <div class="row" style="justify-content:space-between"><b style="font-size:16px">Gefunden im WLAN</b><button class="btn sm" data-tap="cb|scan" id="cbScanBtn">Neu suchen</button></div>
+        <div id="cbFound" class="scroll" style="max-height:200px"></div>
+        <div class="row" style="gap:10px"><input type="text" id="cbHost" placeholder="Adresse, z. B. 192.168.1.50 oder venus.local">
+          <input type="password" id="cbPw" placeholder="Passwort (nur falls gesetzt)" style="width:260px;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:17px;padding:0 14px"></div>
+        <button class="btn sel" data-tap="cb|save">Verbinden</button>
+        <details><summary class="hint" style="font-size:14px;cursor:pointer">Was muss am Cerbo eingestellt sein?</summary>
+          <div class="hint" style="font-size:14px;line-height:1.55;margin-top:6px">
+          1. Cerbo und Pi müssen im <b>gleichen WLAN/Netz</b> sein (Cerbo per WLAN oder Netzwerkkabel am Womo-Router).<br>
+          2. Am Cerbo-Bildschirm (oder in der VictronConnect-App): <b>Einstellungen → Dienste</b> (neuere Versionen: <b>Einstellungen → Integrationen</b>) → <b>„MQTT“</b> einschalten.<br>
+          3. <b>Einstellungen → Allgemein → Sicherheitsprofil</b>: „Schwach“ oder „Ungesichert“ wählen – bei „Schwach“ hier das Cerbo-Passwort eintragen.<br>
+          4. Die Adresse steht am Cerbo unter <b>Einstellungen → WLAN</b> bzw. <b>Ethernet</b> („IP-Adresse“). Oder einfach oben „Neu suchen“.</div></details>
+      </div></div>`);
+    el = document.getElementById("cbBox");
+    document.getElementById("cbHost").addEventListener("keydown", e => { if (e.key === "Enter") cbSave(); });
+  }
+  el.style.display = CB.open ? "flex" : "none";
+  if (!CB.open) return;
+  const hi = document.getElementById("cbHost");
+  if (!hi.value && ST.cerbo_host) hi.value = ST.cerbo_host;
+  html("cbNow", `Jetzt: <b>${esc(ST.cerbo_host || "--")}</b> · ${esc(ST.cerbo || "")}${ST.online ? " ✓" : ""}`);
+  document.getElementById("cbScanBtn").textContent = CB.busy ? "Suche läuft ..." : "Neu suchen";
+  html("cbFound", CB.busy ? `<div class="mute">Suche im WLAN – dauert ca. 15 Sekunden ...</div>`
+    : CB.found.length ? CB.found.map(f => `<button class="btn locRes ${hi.value === f.host ? "sel" : ""}" data-tap="cb|pick|${esc(f.host)}"><b>${esc(f.name)}</b> <span class="mute" style="font-size:14px">${esc(f.host)}</span></button>`).join("")
+    : CB.searched ? `<div class="hint">Nichts gefunden. Ist MQTT am Cerbo eingeschaltet und der Cerbo im gleichen WLAN? Sonst Adresse unten eintragen.</div>` : "");
+}
+
 const RENDER = {start:updStart, energy:updEnergy, batt:updBatt, ac:updAc, tanks:updTanks, sw:updSw, level:updLevel, klima:updKlima, clock:updClock, radio:updRadio, wx:updWx, sys:updSys, extras:updExtras, licht:updLicht};
 let queued = false, lastPaint = 0;
 function schedule(force){
@@ -3218,6 +3273,8 @@ function demoCommand(m){
   if (m.type === "voice_listen") { VC_STATE = "hört"; vcDraw(); setTimeout(() => { VC_STATE = "bereit"; vcMessage({type: "voice_event", heard: "wie voll ist der akku", reply: "Der Akku hat 78 Prozent. Reicht noch ca. 2,5 Tage."}); }, 2500); return; }
   if (m.type === "voice_text") { vcMessage({type: "voice_event", heard: m.text, reply: "(Demo) Befehl verstanden."}); return; }
   if ((m.type || "").startsWith("voice")) return;
+  if (m.type === "cerbo_scan") { setTimeout(() => cbMessage({type: "cerbo_scan", busy: false, searched: true, found: [{host: "192.168.8.40", name: "Victron Cerbo GX"}]}), 1200); return; }
+  if (m.type === "cerbo_set") { ST.cerbo_host = m.host; return; }
   if (m.type === "sens_assign") { const f = SNS.found.find(x => x.address === m.address); if (f) f.role = m.role; SNS.devices = SNS.devices.filter(d => d.role !== m.role).concat([{address: m.address, role: m.role}]); return; }
   if (m.type === "ha_set" || m.type === "ha_check") { setTimeout(() => { camMessage({type: "ha_cams", ok: true, msg: "Verbunden – 4 Kameras gefunden", list: [
     {entity: "camera.einfahrt", name: "Einfahrt"}, {entity: "camera.garten", name: "Garten"}, {entity: "camera.garage", name: "Garage"}, {entity: "camera.haustuer", name: "Haustür"}]}); schedule(); }, 700); return; }

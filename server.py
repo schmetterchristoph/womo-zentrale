@@ -168,6 +168,64 @@ def send_keepalive():
     first_keepalive = False
 
 
+CERBO_SCAN = {"busy": False, "found": [], "searched": False}
+
+
+def cerbo_reconnect():
+    """Neue Cerbo-Adresse / neues Passwort übernehmen und neu verbinden."""
+    c = CFG["cerbo"]
+    try:
+        mq.disconnect()
+        mq.loop_stop()
+    except Exception:
+        pass
+    mq.username_pw_set((c.get("user") or "womo") if c.get("password") else None, c.get("password") or None)
+    state["portal_id"] = c.get("portal_id") or ""
+    state["cerbo"] = "Verbinde ..."
+    state["last_msg"] = 0
+    with lock:
+        values.clear()
+    mq.connect_async(c["host"], int(c.get("port") or 1883), keepalive=30)
+    mq.loop_start()
+    log.info("Cerbo: verbinde mit %s", c["host"])
+
+
+async def cerbo_scan():
+    """Cerbo im Netz suchen: Geräte mit offenem MQTT-Port 1883, Victron-Webseite erkennen."""
+    if CERBO_SCAN["busy"]:
+        return
+    CERBO_SCAN.update(busy=True, found=[])
+    await broadcast({"type": "cerbo_scan", **CERBO_SCAN})
+    hosts = ["172.24.24.1"]
+    for net in lights.local_nets():
+        hosts += [str(h) for h in list(net.hosts())[:1022]]
+    sem, found = asyncio.Semaphore(64), []
+
+    async def probe(h):
+        async with sem:
+            try:
+                r, w = await asyncio.wait_for(asyncio.open_connection(h, 1883), 0.8)
+                w.close()
+            except Exception:
+                return
+        name = "MQTT-Gerät"
+        try:
+            async with aiohttp.ClientSession() as s:
+                async with s.get(f"http://{h}/", timeout=aiohttp.ClientTimeout(total=3)) as r:
+                    t = (await r.text(errors="ignore")).lower()
+            if "victron" in t or "venus" in t or "gx" in t:
+                name = "Victron Cerbo GX"
+        except Exception:
+            pass
+        found.append({"host": h, "name": name})
+
+    await asyncio.gather(*[probe(h) for h in dict.fromkeys(hosts)])
+    found.sort(key=lambda d: (d["name"] != "Victron Cerbo GX", d["host"]))
+    CERBO_SCAN.update(busy=False, found=found, searched=True)
+    log.info("Cerbo-Suche: %s", found)
+    await broadcast({"type": "cerbo_scan", **CERBO_SCAN})
+
+
 def cerbo_write(path: str, value) -> bool:
     if not any(p.match(path) for p in WRITABLE):
         log.warning("Schreiben verweigert: %s", path)
@@ -1072,7 +1130,8 @@ def status_msg():
             "lithium_addr": [b.get("address", "") for b in CFG.get("lithium", {}).get("batteries", [])],
             "version": state["update"].get("version", ""),
             "app_version": (load_changelog() or [{}])[0].get("version", ""),
-            "screen_timeout_min": CFG.get("screen_timeout_min", 0), "ntfy_topic": CFG.get("alarm", {}).get("ntfy_topic", "")}
+            "screen_timeout_min": CFG.get("screen_timeout_min", 0), "ntfy_topic": CFG.get("alarm", {}).get("ntfy_topic", ""),
+            "cerbo_host": CFG["cerbo"].get("host", ""), "cerbo_pw": bool(CFG["cerbo"].get("password"))}
 
 
 async def broadcast(msg):
@@ -1179,6 +1238,18 @@ async def ws_handler(request):
             else:
                 res = await push("🚨 BEWEGUNGSALARM – Test", "Test: So meldet sich ein Bewegungsalarm vom Wohnmobil.", "urgent", detail=True)
             await ws.send_str(json.dumps({"type": "push_result", "ok": res[0], "msg": res[1], "topic": topic}))
+        elif t == "cerbo_scan":
+            asyncio.get_running_loop().create_task(cerbo_scan())
+        elif t == "cerbo_set":
+            host = str(cmd.get("host", "")).strip()[:80]
+            if host:
+                CFG["cerbo"]["host"] = host
+                CFG["cerbo"]["portal_id"] = ""
+                if "password" in cmd:
+                    CFG["cerbo"]["password"] = str(cmd.get("password") or "")[:80]
+                save_config()
+                cerbo_reconnect()
+                await broadcast(status_msg())
         elif t == "loc_search":
             res = await loc_search(cmd.get("q", ""))
             await ws.send_str(json.dumps({"type": "loc_results", "q": cmd.get("q", ""), "results": res,

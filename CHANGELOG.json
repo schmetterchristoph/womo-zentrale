@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.6.3",
+    "date": "2026-11-27",
+    "changes": [
+      "Cerbo verbinden direkt in der Zentrale: System → Verbindung → „Cerbo verbinden / ändern“",
+      "Automatische Suche nach dem Cerbo im WLAN, Adresse und Passwort ohne Terminal eintragen",
+      "Anleitung, was am Cerbo eingestellt sein muss (MQTT, Sicherheitsprofil)"
+    ]
+  },
+  {
     "version": "1.6.2",
     "date": "2026-11-27",
     "changes": [
