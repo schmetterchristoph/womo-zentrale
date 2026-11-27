@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.5.9",
+    "date": "2026-11-27",
+    "changes": [
+      "Optimiert für 10,1-Zoll-Displays (16:10, z. B. 1280×800 oder 1920×1200): keine schwarzen Balken mehr, die volle Höhe wird genutzt",
+      "Startseite verteilt sich automatisch auf die Bildschirmhöhe, größere Schnelltasten",
+      "Menü links mit größeren Tasten, Licht-Grundriss und Reisekarte passen sich an",
+      "Mikrofon-Taste jetzt oben in der Kopfzeile (verdeckt nichts mehr)",
+      "Funktioniert weiterhin auch auf dem 7-Zoll-Display"
+    ]
+  },
+  {
     "version": "1.5.8",
     "date": "2026-11-22",
     "changes": [
