@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.6.0",
+    "date": "2026-11-27",
+    "changes": [
+      "Radio übersichtlicher: große Sender-Kacheln, nichts überlappt mehr",
+      "Doppelte Sender werden zusammengefasst, unleserliche Namen aufgeräumt (z. B. „# TOP 100 DJ CHARTS …“ → „Top 100 DJ Charts“)",
+      "Musikrichtung auf Deutsch unter jedem Sender (z. B. „Pop · Öffentlich-rechtlich“)",
+      "Neu: Sender suchen",
+      "Laufender Sender ist hervorgehoben, Favoriten mit ★ markiert"
+    ]
+  },
+  {
     "version": "1.5.9",
     "date": "2026-11-27",
     "changes": [

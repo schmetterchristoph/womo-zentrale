@@ -146,6 +146,19 @@ input[type=range]{width:100%;height:40px;accent-color:var(--blue)}
 .pinOk{background:var(--green);border-color:var(--green);color:#fff;font-size:22px}
 .verTag{font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:8px;padding:2px 8px}
 #sleepBox{position:absolute;inset:0;background:#000;z-index:80;display:none;cursor:none}
+/* Radio */
+.rGrid{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:74px;gap:8px}
+.rTile{display:flex;align-items:center;gap:12px;padding:0 12px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  font-family:inherit;text-align:left;cursor:pointer;min-width:0;position:relative}
+.rTile.on{border-color:var(--cyan);background:linear-gradient(160deg,#123447,#0f2232);box-shadow:0 0 14px rgba(63,210,224,.25)}
+.rTile:active{transform:scale(.98)}
+.rTxt{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.rTxt b{font-size:17px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rTxt span{font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rTile.on .rTxt span{color:var(--cyan);font-weight:650}
+.rFav{position:absolute;right:10px;top:6px;color:var(--yellow);font-size:14px}
+.rLogo{position:relative;flex:none;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;color:#fff}
+.rLogo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#f3f5f7;padding:4px}
 /* Licht */
 .lgZ{font-size:13px;font-weight:700;fill:#6f93b3;letter-spacing:2px;font-family:"Rajdhani","Arial Narrow",system-ui,sans-serif}
 .lgBtn{position:absolute;width:156px;height:96px;border-radius:20px;border:1.5px solid rgba(127,232,255,.35);
@@ -396,6 +409,7 @@ function runAction(a){
   else if (cmd === "tm" || cmd === "alf" || cmd === "al") clockAction(cmd, p[0], p[1]);
   else if (cmd === "ring") ringStop(p[0] === "snooze");
   else if (cmd === "radio") { unlockAudio(); radioAction(p[0], p[1]); }
+  else if (cmd === "rsearch") { radioSearch(); }
   schedule();
 }
 
@@ -1606,18 +1620,43 @@ const RCATS = [["fav", "Favoriten"], ["top", "Top Deutschland"], ["pop", "Pop"],
   ["news", "Nachrichten"], ["oldies", "Oldies"], ["80s", "80er"], ["chillout", "Chillout"], ["jazz", "Jazz"], ["classical", "Klassik"]];
 const DEMO_STATIONS = ["1LIVE", "WDR 2", "SWR3", "Antenne Bayern", "Radio Paloma", "Deutschlandfunk", "Rock Antenne", "NDR 2", "bigFM", "Klassik Radio"]
   .map(n => ({name: n, url: "", tags: "Demo", id: n}));
-async function radioLoad(cat){
+// Sendernamen aufräumen ("# TOP 100 DJ CHARTS - 24/7 ..." -> "Top 100 DJ Charts")
+function rClean(n){
+  let x = String(n || "").replace(/[\u{1F000}-\u{1FAFF}\u2600-\u27BF\uFE0F]/gu, "");
+  x = x.split(/\s+\|\s+|\s+[-–—]{1,2}\s+/).find(t => t.replace(/[^\p{L}\p{N}]/gu, "").length >= 3) || x;
+  x = x.replace(/[#_*~|=<>]+/g, " ").replace(/^[\s\-–—.:]+|[\s\-–—.:]+$/g, "").replace(/\s+/g, " ").trim();
+  if (x.length > 5 && x === x.toUpperCase() && /[A-ZÄÖÜ]{4}/.test(x))
+    x = x.toLowerCase().replace(/(^|[\s(.-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()).replace(/\b(Dj|Fm|Ndr|Wdr|Swr|Mdr|Rbb|Br|Hr|Edm)\b/g, w => w.toUpperCase());
+  return x;
+}
+const RGENRE = {pop: "Pop", rock: "Rock", news: "Nachrichten", oldies: "Oldies", "60s": "60er", "70s": "70er", "80s": "80er", "90s": "90er", "2000s": "2000er",
+  dance: "Dance", electronic: "Elektronisch", techno: "Techno", trance: "Trance", house: "House", hiphop: "Hip-Hop", rap: "Rap", jazz: "Jazz", classical: "Klassik",
+  schlager: "Schlager", chillout: "Chillout", ambient: "Ambient", lounge: "Lounge", culture: "Kultur", talk: "Talk", charts: "Charts", hits: "Hits", "top 40": "Hits",
+  "public radio": "Öffentlich-rechtlich", "public service": "Öffentlich-rechtlich", information: "Info", relax: "Entspannung", metal: "Metal", alternative: "Alternative",
+  country: "Country", soul: "Soul", "adult contemporary": "Pop", volksmusik: "Volksmusik", kids: "Kinder", sport: "Sport", regional: "Regional", indie: "Indie", blues: "Blues"};
+function rGenre(tags){
+  const out = [];
+  for (const t of String(tags || "").toLowerCase().split(",").map(x => x.trim())) { const g = RGENRE[t]; if (g && !out.includes(g)) out.push(g); if (out.length === 2) break; }
+  return out.join(" · ");
+}
+async function radioLoad(cat, query){
   RADIO.cat = cat;
-  if (cat === "fav") { RADIO.list = RADIO.favs; RADIO.status = RADIO.favs.length ? "" : "Noch keine Favoriten – beim Sender auf ★ tippen"; schedule(); return; }
-  RADIO.status = "Lade Sender ..."; schedule();
-  const q = cat === "top" ? "bycountrycodeexact/DE?" : `search?countrycode=DE&tag=${encodeURIComponent(cat)}&`;
+  if (cat === "fav") { RADIO.list = RADIO.favs; RADIO.status = RADIO.favs.length ? "" : "Noch keine Favoriten – beim laufenden Sender auf ★ tippen"; schedule(); return; }
+  RADIO.status = "Lade Sender ..."; RADIO.list = []; schedule();
+  const q = cat === "search" ? `search?name=${encodeURIComponent(query || "")}&` : cat === "top" ? "bycountrycodeexact/DE?" : `search?countrycode=DE&tag=${encodeURIComponent(cat)}&`;
   try {
-    const r = await fetch(`https://de1.api.radio-browser.info/json/stations/${q}order=clickcount&reverse=true&limit=40&hidebroken=true`);
+    const r = await fetch(`https://de1.api.radio-browser.info/json/stations/${q}order=clickcount&reverse=true&limit=100&hidebroken=true`);
     const j = await r.json();
-    const seen = new Set();
-    RADIO.list = j.filter(s => s.url_resolved && !seen.has(s.name.trim().toLowerCase()) && seen.add(s.name.trim().toLowerCase()))
-      .map(s => ({name: s.name.trim(), url: s.url_resolved, logo: s.favicon || "", tags: (s.tags || "").split(",").slice(0, 3).join(", "), id: s.stationuuid}));
-    RADIO.status = "";
+    const seen = new Set(), list = [];
+    for (const st of j) {
+      const name = rClean(st.name), key = name.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+      if (!st.url_resolved || key.length < 2 || seen.has(key)) continue;
+      seen.add(key);
+      list.push({name, url: st.url_resolved, logo: st.favicon || "", tags: rGenre(st.tags), id: st.stationuuid});
+      if (list.length >= 48) break;
+    }
+    RADIO.list = list;
+    RADIO.status = list.length ? "" : "Keine Sender gefunden";
   } catch (e) { RADIO.list = DEMO_STATIONS; RADIO.status = "Senderliste nicht erreichbar (Internet?) – Beispielliste"; }
   schedule();
 }
@@ -1641,30 +1680,49 @@ function radioAction(a, b){
     try { localStorage.setItem("womoRadioFavs", JSON.stringify(RADIO.favs)); } catch (e) {}
   }
 }
+function rLogo(st, size){
+  const hue = [...(st.name || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+  const ini = (st.name || "?").replace(/[^\p{L}\p{N} ]/gu, "").split(" ").filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "♪";
+  return `<span class="rLogo" style="width:${size}px;height:${size}px;background:hsl(${hue} 45% 32%)"><b style="font-size:${Math.round(size * .36)}px">${esc(ini)}</b>${st.logo ? `<img src="${esc(st.logo)}" alt="" loading="lazy" onerror="this.remove()">` : ""}</span>`;
+}
+function radioSearch(){
+  const el = document.getElementById("rSearch"); const q = el ? el.value.trim() : "";
+  if (q.length < 2) return; oskHide(); el.blur(); radioLoad("search", q);
+}
 function updRadio(){
   if (!RADIO.cat) radioLoad(RADIO.favs.length ? "fav" : "top");
+  const pg = document.getElementById("pg-radio");
+  if (!document.getElementById("rList")) {
+    pg.innerHTML = `<div class="grid" style="grid-template-columns:200px 1fr 320px;height:100%">
+      <div class="scroll" data-keep="rc" style="min-height:0"><div class="grid" id="rCats" style="gap:6px;align-content:start"></div></div>
+      <div class="card" style="display:flex;flex-direction:column;min-height:0;padding:14px 16px">
+        <div class="row" style="gap:10px;margin-bottom:10px"><h3 style="margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="rTitle">Sender</h3>
+          <input type="text" id="rSearch" placeholder="Sender suchen …" style="width:240px;height:46px"><button class="btn sm sel" style="height:46px" data-tap="rsearch">Suchen</button></div>
+        <div class="scroll" data-keep="rl" style="flex:1;min-height:0"><div id="rList" class="rGrid"></div></div></div>
+      <div class="card" id="rNow" style="display:flex;flex-direction:column;gap:14px;text-align:center"></div></div>`;
+    document.getElementById("rSearch").addEventListener("keydown", e => { if (e.key === "Enter") radioSearch(); });
+  }
   const p = RADIO.playing, fav = p && RADIO.favs.some(x => x.id === p.id);
   const on = p && !RADIO.audio.paused;
-  const logo = s => s.logo ? `<img src="${esc(s.logo)}" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:10px" onerror="this.remove()">` : "";
-  const list = RADIO.list.map(s => `<button class="btn ${p && p.id === s.id ? "sel" : ""}" style="height:auto;padding:10px;text-align:left;display:flex;gap:10px;align-items:center" data-tap="radio|play|${esc(s.id)}">
-      <span style="width:44px;height:44px;flex:none;background:var(--panel);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--mute)">${logo(s) || "♪"}</span>
-      <span style="min-width:0"><b style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px">${esc(s.name)}</b>
-      <span class="hint" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${esc(s.tags || "")}</span></span></button>`).join("");
-  paint("radio", `<div class="grid" style="grid-template-columns:190px 1fr 330px;height:100%">
-    <div class="grid scroll" data-keep="rc" style="align-content:start;gap:6px">${RCATS.map(([k, t]) => `<button class="btn ${RADIO.cat === k ? "sel" : ""}" style="height:50px;font-size:16px" data-tap="radio|cat|${k}">${t}</button>`).join("")}</div>
-    <div class="card" style="display:flex;flex-direction:column;min-height:0"><h3>Sender ${RADIO.status ? `<span class="mute" style="text-transform:none;letter-spacing:0">· ${esc(RADIO.status)}</span>` : ""}</h3>
-      <div class="grid scroll" data-keep="rl" style="grid-template-columns:1fr 1fr;gap:8px;flex:1;align-content:start">${list}</div></div>
-    <div class="card" style="display:flex;flex-direction:column;gap:14px;text-align:center"><h3>Läuft gerade</h3>
-      <div style="width:150px;height:150px;margin:0 auto;background:var(--panel2);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:60px;color:var(--cyan);${on ? "box-shadow:0 0 30px rgba(63,210,224,.45)" : ""}">${p ? logo(p) || "♪" : "♪"}</div>
-      <div class="mid" style="min-height:34px">${p ? esc(p.name) : "Kein Sender"}</div>
-      <div class="row" style="justify-content:center;gap:10px">
-        <button class="btn" style="width:70px;font-size:26px" data-tap="radio|vol|-0.1">−</button>
-        <div style="width:90px"><div class="hint">Lautstärke</div><div class="mid">${Math.round(RADIO.vol * 100)} %</div></div>
-        <button class="btn" style="width:70px;font-size:26px" data-tap="radio|vol|0.1">+</button></div>
-      <div class="row" style="justify-content:center;gap:10px">
-        <button class="btn ${on ? "sel red" : ""}" style="flex:1" data-tap="radio|stop|0" ${p ? "" : "disabled"}>Stopp</button>
-        <button class="btn ${fav ? "sel" : ""}" style="width:80px;font-size:24px" data-tap="radio|fav|0" ${p ? "" : "disabled"}>★</button></div>
-      <div class="hint">Ton über USB- oder Bluetooth-Lautsprecher am Pi</div></div></div>`);
+  html("rCats", RCATS.map(([k, t]) => `<button class="btn ${RADIO.cat === k ? "sel" : ""}" style="height:52px;font-size:17px;width:100%" data-tap="radio|cat|${k}">${k === "fav" ? "★ " : ""}${t}</button>`).join(""));
+  const catName = RADIO.cat === "search" ? "Suche" : (RCATS.find(c => c[0] === RADIO.cat) || [0, "Sender"])[1];
+  html("rTitle", `${esc(catName)} <span class="mute" style="text-transform:none;letter-spacing:0">${RADIO.status ? "· " + esc(RADIO.status) : `· ${RADIO.list.length}`}</span>`);
+  html("rList", RADIO.list.map(st => { const cur = p && p.id === st.id;
+    return `<button class="rTile ${cur ? "on" : ""}" data-tap="radio|play|${esc(st.id)}">${rLogo(st, 54)}
+      <span class="rTxt"><b>${esc(st.name)}</b><span>${cur ? (on ? "▶ läuft" : "angehalten") : esc(st.tags || "Radio")}</span></span>
+      ${RADIO.favs.some(x => x.id === st.id) ? `<span class="rFav">★</span>` : ""}</button>`; }).join(""));
+  html("rNow", `<h3>Läuft gerade</h3>
+    <div style="margin:0 auto;${on ? "filter:drop-shadow(0 0 22px rgba(63,210,224,.5))" : ""}">${p ? rLogo(p, 150) : `<span class="rLogo" style="width:150px;height:150px;background:var(--panel2)"><b style="font-size:60px;color:var(--cyan)">♪</b></span>`}</div>
+    <div class="mid" style="min-height:34px;line-height:1.15">${p ? esc(p.name) : "Kein Sender"}</div>
+    <div class="hint" style="margin-top:-8px">${p ? esc(p.tags || "") : "Sender links antippen"}</div>
+    <div class="row" style="justify-content:center;gap:10px">
+      <button class="btn" style="width:70px;font-size:26px" data-tap="radio|vol|-0.1">−</button>
+      <div style="width:90px"><div class="hint">Lautstärke</div><div class="mid">${Math.round(RADIO.vol * 100)} %</div></div>
+      <button class="btn" style="width:70px;font-size:26px" data-tap="radio|vol|0.1">+</button></div>
+    <div class="row" style="justify-content:center;gap:10px">
+      <button class="btn ${on ? "sel red" : ""}" style="flex:1" data-tap="radio|stop|0" ${p ? "" : "disabled"}>Stopp</button>
+      <button class="btn ${fav ? "sel" : ""}" style="width:80px;font-size:24px" data-tap="radio|fav|0" ${p ? "" : "disabled"} title="Favorit">★</button></div>
+    <div class="hint">Ton über USB- oder Bluetooth-Lautsprecher am Pi</div>`);
 }
 RADIO.audio.addEventListener("playing", () => schedule());
 RADIO.audio.addEventListener("pause", () => schedule());
